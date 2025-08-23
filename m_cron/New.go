@@ -8,16 +8,14 @@ import (
 )
 
 /*
-Package m_cron 提供简单的定时任务封装。
-
 用法示例：
 
 c, err := m_cron.New(m_cron.CronOption{
-		Func: func() { fmt.Println("Hello") },
-		Spec: "0 18 5 3,9,15,21,27 * ? ",
+	Func: func() { fmt.Println("Hello") },
+	Spec: "0 18 5 3,9,15,21,27 * ? ",
 })
 if err != nil {
-		log.Fatal(err)
+	log.Fatal(err)
 }
 defer c.Stop() // 程序退出前停止定时器
 */
