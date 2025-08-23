@@ -1,63 +1,81 @@
 package m_cycle
 
 import (
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
 /*
-// 间隔执行器
-
-m_cycle.New(m_cycle.Opt{
-	Func:      LogInit,
-	SleepTime: time.Hour * 24,  // 每24 小时 执行一次
-}).Start()
-
+cy := m_cycle.New(m_cycle.Opt{Func: myFunc, SleepTime: time.Second})
+cy.Start()
+time.Sleep(5 * time.Second)
+cy.EditTime(2 * time.Second) // 动态修改为2秒
 */
 
 type Cycle struct {
-	Func      func()
-	SleepTime time.Duration
-	Status    int
+	Task     func()
+	Interval time.Duration
+
+	status int32
+	stopCh chan struct{}
+	editCh chan time.Duration
+	once   sync.Once
 }
 
-type Opt struct {
-	Func      func()
-	SleepTime time.Duration
+type Options struct {
+	Task     func()
+	Interval time.Duration
 }
 
-func New(param Opt) *Cycle {
-	var CycleObj Cycle
-
-	CycleObj.Func = param.Func
-
-	if CycleObj.Func == nil {
-		CycleObj.Func = func() {}
+func New(opt Options) *Cycle {
+	c := &Cycle{
+		Task:     opt.Task,
+		Interval: opt.Interval,
+		status:   1,
+		stopCh:   make(chan struct{}),
+		editCh:   make(chan time.Duration, 1), // 缓冲防阻塞
 	}
-
-	CycleObj.SleepTime = param.SleepTime
-	CycleObj.Status = 1 // 表示开始循环
-
-	return &CycleObj
+	if c.Task == nil {
+		c.Task = func() {}
+	}
+	return c
 }
 
-func (Cy *Cycle) End() *Cycle {
-	Cy.Status = 2
-
-	return Cy
+func (c *Cycle) End() *Cycle {
+	c.once.Do(func() {
+		if atomic.CompareAndSwapInt32(&c.status, 1, 2) {
+			close(c.stopCh)
+		}
+	})
+	return c
 }
 
-func (Cy *Cycle) Start() *Cycle {
-	Cy.Func()
+func (c *Cycle) Start() *Cycle {
+	c.Task()
 	go func() {
+		ticker := time.NewTicker(c.Interval)
+		defer ticker.Stop()
 		for {
-			if Cy.Status == 2 {
-				break
+			select {
+			case <-c.stopCh:
+				return
+			case d := <-c.editCh:
+				ticker.Stop()
+				ticker = time.NewTicker(d)
+			case <-ticker.C:
+				c.Task()
 			}
-
-			time.Sleep(Cy.SleepTime) // 间隔多久执行一次
-			Cy.Func()
 		}
 	}()
+	return c
+}
 
-	return Cy
+// SetInterval 动态修改定时器间隔
+func (c *Cycle) SetInterval(d time.Duration) {
+	c.Interval = d
+	select {
+	case c.editCh <- d:
+	default:
+	}
 }
