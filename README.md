@@ -4,16 +4,41 @@
 
 包含很多的工具跟模块,让 go 代码编写更加顺手。
 
-使用方式:
+## 安装方式
 
 ```bash
-go get -u github.com/m-startgo/go-utils
+
+go get -u github.com/m-startgo/go-utils@latest
+
 ```
 
-## 升级使用最新发布版本
+## 安装指定版本
 
 ```bash
 go get -u github.com/m-startgo/go-utils@v0.0.2
-
-go get -u github.com/m-startgo/go-utils@latest
 ```
+
+## 使用示例
+
+```go
+// 引入指定目录如 m_str
+import "github.com/m-startgo/go-utils/m_str"
+
+// 使用指定函数如 m_str.TplFormat
+func main() {
+	tpl := `
+app.name = ${appName}
+app.ip = ${appIP}
+app.port = ${appPort}
+`
+	data := map[string]string{
+		"appName": "my_ap123p",
+		"appIP":   "0.0.0.0",
+	}
+
+	s := m_str.TplFormat(tpl, data)
+	fmt.Println("s", s)
+}
+```
+
+其余模块及函数请查看各目录下的注释以及 `_test.go` 测试文件。

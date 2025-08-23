@@ -5,6 +5,10 @@ import (
 	"strconv"
 )
 
+/*
+将各种类型转换为字符串
+*/
+
 func ToStr(p any) string {
 	switch v := p.(type) {
 	case []byte: // []uint8

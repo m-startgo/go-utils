@@ -2,16 +2,16 @@ package m_str
 
 import "os"
 
-// TplFormat 使用给定的数据替换模板中的占位符
-//
-// 参数:
-//
-//	tplStr - 模板字符串  以 ${key} 的形式表示占位符
-//	MapData - 用于替换占位符的数据映射
-//
-// 返回值:
-//
-//	string - 替换占位符后的字符串
+/*
+TplFormat 使用给定的数据替换模板中的占位符
+
+参数:
+	tplStr - 模板字符串  以 ${key} 的形式表示占位符
+	MapData - 用于替换占位符的数据映射
+
+返回值:
+	string - 替换占位符后的字符串
+*/
 
 func TplFormat(tplStr string, MapData map[string]string) string {
 	s := os.Expand(tplStr, func(k string) string {
