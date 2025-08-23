@@ -4,6 +4,16 @@ import (
 	"testing"
 )
 
+// go test -v -run Test_Join
+
+func Test_Join(t *testing.T) {
+	a := []int32{1, 2, 3, 4, 5}
+	joinStr := Join("mo7", "欢迎你", a, "张三")
+
+	t.Log("joinStr", joinStr)
+}
+
+// go test -v -run Test_ToStr
 func Test_ToStr(t *testing.T) {
 	// 测试 []rune 转字符串
 	a := []rune("mo7欢迎你")
@@ -58,4 +68,20 @@ func Test_ToStr(t *testing.T) {
 	j := [3]int{1, 2, 3}
 	jStr := ToStr(j)
 	t.Log(jStr)
+}
+
+// go test -v -run Test_TplFormat
+func Test_TplFormat(t *testing.T) {
+	tpl := `
+app.name = ${appName}
+app.ip = ${appIP}
+app.port = ${appPort}
+`
+	data := map[string]string{
+		"appName": "my_ap123p",
+		"appIP":   "0.0.0.0",
+	}
+
+	s := TplFormat(tpl, data)
+	t.Log("temp", s)
 }

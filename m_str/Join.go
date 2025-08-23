@@ -1,7 +1,6 @@
 package m_str
 
 import (
-	"os"
 	"strings"
 )
 
@@ -19,30 +18,4 @@ func Join(s ...any) string {
 		build.WriteString(ToStr(v))
 	}
 	return build.String()
-}
-
-/*
-字符串模板
-
-	var config = `
-
-app.name = ${appName}
-app.ip = ${appIP}
-app.port = ${appPort}
-`
-
-	var dev = map[string]string{
-		"appName": "my_ap123p",
-		"appIP":   "0.0.0.0",
-		"appPort": "8080",
-	}
-	s := m_str.Temp(config, dev)
-
-	fmt.Println("temp", s)
-*/
-func Temp(tmplStr string, lMap map[string]string) string {
-	s := os.Expand(tmplStr, func(k string) string {
-		return lMap[k]
-	})
-	return s
 }
