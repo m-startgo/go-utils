@@ -1,21 +1,37 @@
 package m_str
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 func ToStr(p any) string {
-	returnStr := ""
-	switch p := p.(type) {
-	case []int32:
-		returnStr = string(p)
-	case []uint8:
-		returnStr = string(p)
+	switch v := p.(type) {
+	case []byte: // []uint8
+		return string(v)
+	case []rune: // []int32
+		return string(v)
+	case int:
+		return strconv.Itoa(v)
+	case int8:
+		return strconv.FormatInt(int64(v), 10)
+	case int16:
+		return strconv.FormatInt(int64(v), 10)
 	case int32:
-		returnStr = string(p)
+		return strconv.FormatInt(int64(v), 10)
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case uint:
+		return strconv.FormatUint(uint64(v), 10)
 	case uint8:
-		returnStr = string(p)
+		return strconv.FormatUint(uint64(v), 10)
+	case uint16:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint32:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint64:
+		return strconv.FormatUint(v, 10)
 	default:
-		returnStr = fmt.Sprintf("%+v", p)
+		return fmt.Sprintf("%+v", p)
 	}
-
-	return returnStr
 }
