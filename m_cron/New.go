@@ -36,13 +36,20 @@ var (
 
 // CronOption 是 New 的配置项。
 type CronOption struct {
-	Func func() // 定时执行的函数，不能为空
-	Spec string // cron 表达式（带秒时为 6 字段），不能为空
+	Func      func() // 定时执行的函数，不能为空
+	Spec      string // cron 表达式（带秒时为 6 字段），不能为空
+	Immediate bool   // 是否在启动后立即执行一次
 }
 
-// New 创建并启动定时任务并返回已启动的 *cron.Cron。
-// 当参数不合法或表达式无法解析时返回错误。返回的 cron 需要调用方在适当时机 Stop()。
-func New(opt CronOption) (*cron.Cron, error) {
+// Cron 是本包对 github.com/robfig/cron 的封装，便于管理任务与优雅停止。
+type Cron struct {
+	c     *cron.Cron
+	entry cron.EntryID
+}
+
+// New 创建并启动定时任务并返回封装的 *Cron。
+// 当参数不合法或表达式无法解析时返回错误。返回的 Cron 需要在适当时机 Stop()。
+func New(opt CronOption) (*Cron, error) {
 	if opt.Func == nil {
 		return nil, ErrNilFunc
 	}
@@ -52,10 +59,43 @@ func New(opt CronOption) (*cron.Cron, error) {
 
 	c := cron.New(cron.WithSeconds())
 
-	if _, err := c.AddFunc(opt.Spec, opt.Func); err != nil {
+	id, err := c.AddFunc(opt.Spec, opt.Func)
+	if err != nil {
 		return nil, fmt.Errorf("m_cron: invalid spec %q: %w", opt.Spec, err)
 	}
 
 	c.Start()
-	return c, nil
+
+	if opt.Immediate {
+		// 非阻塞立即执行一次
+		go func() {
+			defer func() {
+				// 防止用户函数 panic 影响调度器
+				_ = recover()
+			}()
+			opt.Func()
+		}()
+	}
+
+	return &Cron{
+		c:     c,
+		entry: id,
+	}, nil
+}
+
+// Stop 优雅停止并等待正在运行的任务完成。
+func (cr *Cron) Stop() {
+	if cr == nil || cr.c == nil {
+		return
+	}
+	ctx := cr.c.Stop()
+	<-ctx.Done()
+}
+
+// Remove 删除已注册的任务（若需要按 ID 删除）。
+func (cr *Cron) Remove() {
+	if cr == nil || cr.c == nil {
+		return
+	}
+	cr.c.Remove(cr.entry)
 }
