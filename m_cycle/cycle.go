@@ -11,7 +11,6 @@ cy := m_cycle.New(m_cycle.Opt{Func: myFunc, SleepTime: time.Second})
 cy.Start()
 time.Sleep(5 * time.Second)
 cy.EditTime(2 * time.Second) // 动态修改为2秒
-
 */
 
 type Cycle struct {

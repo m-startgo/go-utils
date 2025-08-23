@@ -13,7 +13,7 @@ go get -u github.com/m-startgo/go-utils
 ## 升级使用最新发布版本
 
 ```bash
-go get -u github.com/m-startgo/go-utils@v0.0.1
+go get -u github.com/m-startgo/go-utils@v0.0.2
 
 go get -u github.com/m-startgo/go-utils@latest
 ```
