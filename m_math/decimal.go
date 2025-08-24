@@ -19,3 +19,19 @@ var (
 	Zero = Decimal{value: decimal.Zero}
 	One  = Decimal{value: decimal.NewFromInt(1)}
 )
+
+// NewFromFloat 从 float64 创建一个 Decimal 对象
+func NewFromFloat(value float64) Decimal {
+	return Decimal{value: decimal.NewFromFloat(value)}
+}
+
+// NewFromString 从字符串创建一个 Decimal 对象
+func NewFromString(value string) (Decimal, error) {
+	v, err := decimal.NewFromString(value)
+	return Decimal{value: v}, err
+}
+
+// NewFromInt 从 int64 创建一个 Decimal 对象
+func NewFromInt(value int64) Decimal {
+	return Decimal{value: decimal.NewFromInt(value)}
+}
