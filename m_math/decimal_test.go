@@ -303,7 +303,7 @@ func TestPctNAndChgPctN(t *testing.T) {
 		t.Errorf("Expected %s, got %s", expectedPct, PctN(a, b, 2).Value().StringFixed(2))
 	}
 	// 计算变化百分比 ((a-b)/b)*100，保留3位小数
-	expectedChgPct := "-81.818" // (12.345-67.89)/67.89*100 ≈ -81.8181，四舍五入后为 -81.818
+	expectedChgPct := "-81.816" // (12.345-67.89)/67.89*100 ≈ -81.8161，四舍五入后为 -81.816
 	if ChgPctN(a, b, 3).Value().StringFixed(3) != expectedChgPct {
 		t.Errorf("Expected %s, got %s", expectedChgPct, ChgPctN(a, b, 3).Value().StringFixed(3))
 	}
