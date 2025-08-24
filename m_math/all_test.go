@@ -287,22 +287,22 @@ func TestRandomFunctions(t *testing.T) {
 
 	// 测试 RandInt
 	for i := 0; i < 10; i++ {
-		n := RandInt(5, 10)
-		if n < 5 || n > 10 {
-			t.Errorf("RandInt failed: got %d, expected in range [5, 10]", n)
+		randInt := RandInt(5, 10)
+		if randInt < 5 || randInt > 10 {
+			t.Errorf("RandInt failed: got %d, expected in range [5, 10]", randInt)
 		}
 	}
 
 	// 测试 RandInt 参数交换
-	n = RandInt(10, 5)
-	if n < 5 || n > 10 {
-		t.Errorf("RandInt with swapped params failed: got %d, expected in range [5, 10]", n)
+	randInt := RandInt(10, 5)
+	if randInt < 5 || randInt > 10 {
+		t.Errorf("RandInt with swapped params failed: got %d, expected in range [5, 10]", randInt)
 	}
 
 	// 测试 RandInt 相等参数
-	n = RandInt(5, 5)
-	if n != 5 {
-		t.Errorf("RandInt with equal params failed: expected 5, got %d", n)
+	randInt = RandInt(5, 5)
+	if randInt != 5 {
+		t.Errorf("RandInt with equal params failed: expected 5, got %d", randInt)
 	}
 }
 
