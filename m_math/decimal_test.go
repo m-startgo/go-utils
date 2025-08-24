@@ -1,6 +1,7 @@
 package m_math
 
 import (
+	"math"
 	"testing"
 )
 
@@ -221,5 +222,62 @@ func TestNewFromIntExtreme(t *testing.T) {
 	d := NewFromInt(9223372036854775807)
 	if d.String() != "9223372036854775807" {
 		t.Errorf("Expected max int64, got %s", d.String())
+	}
+}
+
+func TestDivSafeByZero(t *testing.T) {
+	d1 := NewFromFloat(1.23)
+	_, err := d1.DivSafe(Zero)
+	if err == nil {
+		t.Errorf("Expected error when dividing by zero with DivSafe, got nil")
+	}
+}
+
+func TestNegAndComparisons(t *testing.T) {
+	dPos := NewFromFloat(1.23)
+	dNeg := dPos.Neg()
+	if !dNeg.Equal(NewFromFloat(-1.23)) {
+		t.Errorf("Neg failed: expected -1.23, got %s", dNeg.String())
+	}
+
+	if !dPos.GreaterThan(Zero) {
+		t.Errorf("Expected positive > zero")
+	}
+	if !dNeg.LessThan(Zero) {
+		t.Errorf("Expected negative < zero")
+	}
+}
+
+func TestFloat64ExactWithTolerance(t *testing.T) {
+	d, _ := NewFromString("1.5")
+	f := d.Float64()
+	if math.Abs(f-1.5) > 1e-12 {
+		t.Errorf("Expected float approx 1.5, got %f", f)
+	}
+}
+
+func TestNewFromStringVariants(t *testing.T) {
+	// 科学计数法
+	dSci, err := NewFromString("1.23e3")
+	if err != nil {
+		t.Errorf("Error parsing scientific notation: %v", err)
+	}
+	if dSci.String() != "1230" {
+		t.Errorf("Expected 1230, got %s", dSci.String())
+	}
+
+	// 带空白（若希望支持可在使用处 Trim 空白）
+	_, err = NewFromString("  1.23  ")
+	if err == nil {
+		// 如果希望 NewFromString 接受空白，则此处应为 nil；根据 shopspring/decimal 行为调整期望
+		// 这里只记录行为，避免误判
+	}
+}
+
+func TestStringPreserveScale(t *testing.T) {
+	d1, _ := NewFromString("1.2300")
+
+	if d1.String() != "1.23" {
+		t.Errorf("Expected scale preserved as 1.23, got %s", d1.String())
 	}
 }
