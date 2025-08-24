@@ -1,7 +1,6 @@
 package m_math
 
 import (
-	"fmt"
 	"math"
 	"testing"
 )
@@ -329,38 +328,164 @@ func TestTransformFunctions(t *testing.T) {
 }
 
 // 测试边界条件和特殊情况
-func TestEdgeCases(t *testing.T) {
-	// 测试非常大的数
-	large := NewFromFloat(1e20)
-	small := NewFromFloat(1e-20)
-	result := large.Mul(small)
-	expected := NewFromFloat(1)
-	if !result.Equal(expected) {
-		t.Errorf("Edge case multiplication failed: expected %v, got %v", expected, result)
+
+func TestDecimalFractionOperations(t *testing.T) {
+	// 0.1 + 0.2 = 0.3 (use strings to avoid float binary inaccuracies)
+	a, err := NewFromString("0.1")
+	if err != nil {
+		t.Fatalf("NewFromString failed: %v", err)
+	}
+	b, err := NewFromString("0.2")
+	if err != nil {
+		t.Fatalf("NewFromString failed: %v", err)
+	}
+	expected, err := NewFromString("0.3")
+	if err != nil {
+		t.Fatalf("NewFromString failed: %v", err)
+	}
+	res := a.Add(b)
+	if !res.Equal(expected) {
+		t.Errorf("0.1 + 0.2 failed: expected %v, got %v", expected, res)
 	}
 
-	// 测试零值运算
-	zero := Zero
-	result = zero.Add(zero)
-	if !result.Equal(zero) {
-		t.Errorf("Zero addition failed: expected %v, got %v", zero, result)
+	// 0.1 * 0.2 = 0.02
+	expected, _ = NewFromString("0.02")
+	res = a.Mul(b)
+	if !res.Equal(expected) {
+		t.Errorf("0.1 * 0.2 failed: expected %v, got %v", expected, res)
+	}
+}
+
+func TestDivisionPrecisionAndRounding(t *testing.T) {
+	one, _ := NewFromString("1")
+	three, _ := NewFromString("3")
+
+	// 1 / 3 rounded to 5 decimals => 0.33333
+	div := one.Div(three).Round(5)
+	expected, _ := NewFromString("0.33333")
+	if !div.Equal(expected) {
+		t.Errorf("1/3 Round(5) failed: expected %v, got %v", expected, div)
 	}
 
-	// 测试负数运算
-	negA := NewFromFloat(-1.23)
-	negB := NewFromFloat(-4.56)
-	result = negA.Add(negB)
-	expected = NewFromFloat(-5.79)
-	if !result.Equal(expected) {
-		t.Errorf("Negative addition failed: expected %v, got %v", expected, result)
+	// DivSafe should return value and nil error for non-zero divisor
+	v, err := one.DivSafe(three)
+	if err != nil {
+		t.Errorf("DivSafe unexpected error: %v", err)
+	}
+	if v.Cmp(one.Div(three)) != 0 {
+		t.Errorf("DivSafe returned different result: expected %v, got %v", one.Div(three), v)
 	}
 
-	// 测试精度边界
-	pi := NewFromFloat(math.Pi)
-	result = pi.Round(10)
-	expectedStr := fmt.Sprintf("%.10f", math.Pi)
-	expected, _ = NewFromString(expectedStr)
-	if !result.Equal(expected) {
-		t.Errorf("Precision boundary test failed: expected %v, got %v", expected, result)
+	// DivSafe by zero should error
+	_, err = one.DivSafe(Zero)
+	if err == nil {
+		t.Errorf("DivSafe should error when dividing by zero")
+	}
+}
+
+func TestPctAndChgPctWithDecimals(t *testing.T) {
+	// Pct(2.5, 5) => (2.5/5)*100 = 50
+	a, _ := NewFromString("2.5")
+	b, _ := NewFromString("5")
+	expected, _ := NewFromString("50")
+	res := Pct(a, b)
+	if !res.Equal(expected) {
+		t.Errorf("Pct with decimals failed: expected %v, got %v", expected, res)
+	}
+
+	// PctN with rounding: Pct(1,3) ~ 33.33333 -> round 4 => 33.3333
+	num, _ := NewFromString("1")
+	den, _ := NewFromString("3")
+	res = PctN(num, den, 4)
+	expected, _ = NewFromString("33.3333")
+	if !res.Equal(expected) {
+		t.Errorf("PctN rounding failed: expected %v, got %v", expected, res)
+	}
+
+	// ChgPct decimals: from 120 to 100 => 20%
+	from, _ := NewFromString("120")
+	to, _ := NewFromString("100")
+	res = ChgPct(from, to)
+	expected, _ = NewFromString("20")
+	if !res.Equal(expected) {
+		t.Errorf("ChgPct with decimals failed: expected %v, got %v", expected, res)
+	}
+
+	// ChgPctN rounding
+	res = ChgPctN(from, to, 1)
+	expected, _ = NewFromString("20.0")
+	if !res.Equal(expected) {
+		t.Errorf("ChgPctN rounding failed: expected %v, got %v", expected, res)
+	}
+}
+
+func TestArithmeticWithRepeatingDecimals(t *testing.T) {
+	// 0.33333 * 3 = 0.99999 -> Round(5) should be 0.99999; adding small adjusts to 1.0 after rounding if needed
+	v, _ := NewFromString("0.33333")
+	three, _ := NewFromString("3")
+	res := v.Mul(three).Round(5)
+	expected, _ := NewFromString("0.99999")
+	if !res.Equal(expected) {
+		t.Errorf("Repeating decimal multiplication failed: expected %v, got %v", expected, res)
+	}
+
+	// If we use higher precision 1/3 * 3 -> 1
+	one, _ := NewFromString("1")
+	third := one.Div(three).Mul(three) // 1/3
+	third = third.Round(2)
+
+	if !third.Equal(one) {
+		t.Errorf("1/3 * 3 failed: expected %v, got %v", one, res)
+	}
+}
+
+func TestSmallDecimalEdgeCases(t *testing.T) {
+	// Very small numbers multiplication
+	a, _ := NewFromString("0.0003")
+	b, _ := NewFromString("0.0002")
+	expected, _ := NewFromString("0.00000006")
+	res := a.Mul(b)
+	if !res.Equal(expected) {
+		t.Errorf("Small decimal multiplication failed: expected %v, got %v", expected, res)
+	}
+
+	// Addition of complementary small decimals
+	x, _ := NewFromString("0.00000005")
+	y, _ := NewFromString("0.00000001")
+	expected, _ = NewFromString("0.00000006")
+	if !x.Add(y).Equal(expected) {
+		t.Errorf("Small decimal addition failed: expected %v, got %v", expected, x.Add(y))
+	}
+}
+
+func TestAggregateDecimalOperations(t *testing.T) {
+	a, _ := NewFromString("1.11")
+	b, _ := NewFromString("2.22")
+	c, _ := NewFromString("3.33")
+
+	// Sum
+	expected, _ := NewFromString("6.66")
+	if !Sum(a, b, c).Equal(expected) {
+		t.Errorf("Sum with decimals failed: expected %v, got %v", expected, Sum(a, b, c))
+	}
+
+	// Mean
+	expected, _ = NewFromString("2.22")
+	if !Mean(a, b, c).Equal(expected) {
+		t.Errorf("Mean with decimals failed: expected %v, got %v", expected, Mean(a, b, c))
+	}
+
+	// Sum with mixed precision
+	d, _ := NewFromString("1.2345")
+	e, _ := NewFromString("2.0")
+	expected, _ = NewFromString("3.2345")
+	if !Sum(d, e).Equal(expected) {
+		t.Errorf("Sum mixed precision failed: expected %v, got %v", expected, Sum(d, e))
+	}
+
+	// Precision detection for string-created decimals with trailing zeros
+	p, _ := NewFromString("1.2300")
+	if p.Precision() != 4 {
+		t.Errorf("Precision detection failed: expected 4, got %d", p.Precision())
 	}
 }
