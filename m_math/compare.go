@@ -37,3 +37,13 @@ func (d Decimal) IsPositive() bool {
 func (d Decimal) IsNegative() bool {
 	return d.value.IsNegative()
 }
+
+// Precision 返回小数点后的有效位数（小数位数）
+// 例如 12.345 -> 3， 100 -> 0
+func (d Decimal) Precision() int {
+	exp := d.value.Exponent()
+	if exp < 0 {
+		return -int(exp)
+	}
+	return 0
+}
