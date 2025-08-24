@@ -281,3 +281,38 @@ func TestStringPreserveScale(t *testing.T) {
 		t.Errorf("Expected scale preserved as 1.23, got %s", d1.String())
 	}
 }
+
+func TestPctAndChgPct(t *testing.T) {
+	a := NewFromFloat(50)
+	b := NewFromFloat(200)
+	if Pct(a, b).String() != "25" {
+		t.Errorf("Expected 25, got %s", Pct(a, b).String())
+	}
+
+	if ChgPct(a, b).String() != "-75" {
+		t.Errorf("Expected -75, got %s", ChgPct(a, b).String())
+	}
+}
+
+func TestPctNAndChgPctN(t *testing.T) {
+	a := NewFromFloat(12.345)
+	b := NewFromFloat(67.89)
+	// 计算百分比 (a/b)*100，保留2位小数
+	expectedPct := "18.18" // 12.345/67.89*100 ≈ 18.1818，四舍五入后为 18.18
+	if PctN(a, b, 2).Value().StringFixed(2) != expectedPct {
+		t.Errorf("Expected %s, got %s", expectedPct, PctN(a, b, 2).Value().StringFixed(2))
+	}
+	// 计算变化百分比 ((a-b)/b)*100，保留3位小数
+	expectedChgPct := "-81.818" // (12.345-67.89)/67.89*100 ≈ -81.8181，四舍五入后为 -81.818
+	if ChgPctN(a, b, 3).Value().StringFixed(3) != expectedChgPct {
+		t.Errorf("Expected %s, got %s", expectedChgPct, ChgPctN(a, b, 3).Value().StringFixed(3))
+	}
+}
+
+func TestValueMethod(t *testing.T) {
+	d := NewFromFloat(1.23)
+	raw := d.Value()
+	if raw.String() != "1.23" {
+		t.Errorf("Value() did not return expected decimal.Decimal")
+	}
+}

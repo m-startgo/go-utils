@@ -68,7 +68,7 @@ func (d Decimal) Div(other Decimal) Decimal {
 	return Decimal{value: d.value.Div(other.value)}
 }
 
-// DivSafe 除法，除数为零时返回错误（非破坏性新增，不替换现有 Div）
+// DivSafe 除法，除数为零时返回错误
 func (d Decimal) DivSafe(other Decimal) (Decimal, error) {
 	if other.value.IsZero() {
 		return Zero, fmt.Errorf("divide by zero")
@@ -147,4 +147,30 @@ func (d Decimal) IsPositive() bool {
 // IsNegative 判断是否为负值
 func (d Decimal) IsNegative() bool {
 	return d.value.IsNegative()
+}
+
+// Pct 计算 (a/b)*100，除数为零时返回 Zero
+func Pct(a, b Decimal) Decimal {
+	if b.IsZero() {
+		return Zero
+	}
+	return a.Div(b).Mul(NewFromInt(100))
+}
+
+// PctN 计算 (a/b)*100 并保留指定小数位数，除数为零时返回 Zero
+func PctN(a, b Decimal, places int32) Decimal {
+	return Pct(a, b).Round(places)
+}
+
+// ChgPct 计算 ((a-b)/b)*100，除数为零时返回 Zero
+func ChgPct(a, b Decimal) Decimal {
+	if b.IsZero() {
+		return Zero
+	}
+	return a.Sub(b).Div(b).Mul(NewFromInt(100))
+}
+
+// ChgPctN 计算 ((a-b)/b)*100 并保留指定小数位数，除数为零时返回 Zero
+func ChgPctN(a, b Decimal, places int32) Decimal {
+	return ChgPct(a, b).Round(places)
 }
