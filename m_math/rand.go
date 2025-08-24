@@ -12,6 +12,7 @@ func init() {
 }
 
 // RandIntN 返回 [0, n) 的随机整数；当 n <= 0 时返回 0
+// RandIntN(5) 可能返回 0,1,2,3,4（不会返回 5）。
 func RandIntN(n int) int {
 	if n <= 0 {
 		return 0
@@ -20,6 +21,7 @@ func RandIntN(n int) int {
 }
 
 // RandInt 返回闭区间 [min, max] 的随机整数；若 min > max 则会交换两者
+// RandInt(2,5) 可能返回 2,3,4,5
 func RandInt(min, max int) int {
 	if min > max {
 		min, max = max, min
