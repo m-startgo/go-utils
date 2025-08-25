@@ -4,13 +4,32 @@ package m_time
 // 使用github.com/araddon/dateparse库进行日期字符串解析
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
 )
 
+// 常用时间格式常量
+const (
+	FormatDateTime  = "2006-01-02 15:04:05"
+	FormatDate      = "2006-01-02"
+	FormatTime      = "15:04:05"
+	FormatYearMonth = "2006-01"
+	FormatMonthDay  = "01-02"
+	FormatISO8601   = "2006-01-02T15:04:05Z07:00"
+	FormatRFC3339   = "2006-01-02T15:04:05Z07:00"
+)
+
 // normalizeUnit 归一化时间单位
+// 将各种时间单位表示形式统一转换为标准形式
+// 参数: u string - 时间单位字符串，可以是多种形式（如'y', 'year', 'years', 'M', 'month'等）
+// 返回: string - 归一化后的标准时间单位
+// 示例: normalizeUnit("y") // 返回: "year"
+//
+//	normalizeUnit("M") // 返回: "month"
+//	normalizeUnit("days") // 返回: "day"
 func normalizeUnit(u string) string {
 	// 保留原始输入的大小写判断，以便支持 Dayjs 风格的 'M' 表示 month
 	s := strings.TrimSpace(u)
@@ -141,17 +160,27 @@ func (t *Time) EndOf(unit string) *Time {
 	}
 }
 
-// DaysInMonth 获取月份的天数
-// 返回: int - 月份的天数
-// 示例: m_time.New().DaysInMonth()
+// 为DaysInMonth添加缓存
+var daysInMonthCache = make(map[string]int)
+
+// DaysInMonth 获取当前时间所在月份的天数
+// 示例: m_time.New().DaysInMonth() // 如10月返回31
 func (t *Time) DaysInMonth() int {
 	if t == nil {
 		return 0
 	}
-	// 使用下月第一天减一天来计算当月天数（可靠）
+	// 构造缓存键
+	cacheKey := fmt.Sprintf("%d-%d", t.tm.Year(), t.tm.Month())
+	if days, ok := daysInMonthCache[cacheKey]; ok {
+		return days
+	}
+	// 计算当月天数
 	firstOfNext := time.Date(t.tm.Year(), t.tm.Month(), 1, 0, 0, 0, 0, t.tm.Location()).AddDate(0, 1, 0)
 	last := firstOfNext.Add(-time.Nanosecond)
-	return last.Day()
+	days := last.Day()
+	// 存入缓存
+	daysInMonthCache[cacheKey] = days
+	return days
 }
 
 // Diff 计算时间差
@@ -252,7 +281,105 @@ func (t *Time) String() string {
 	return t.tm.String()
 }
 
+// Before 检查当前时间是否在另一个时间之前
+// 参数: t2 *Time - 要比较的另一个时间
+// 返回: bool - 如果当前时间在t2之前返回true，否则返回false
+// 示例: m_time.New().Before(m_time.New().Add(24 * time.Hour)) // 返回: true
+func (t *Time) Before(t2 *Time) bool {
+	if t == nil || t2 == nil {
+		return false
+	}
+	return t.tm.Before(t2.tm)
+}
+
+// After 检查当前时间是否在另一个时间之后
+// 参数: t2 *Time - 要比较的另一个时间
+// 返回: bool - 如果当前时间在t2之后返回true，否则返回false
+// 示例: m_time.New().After(m_time.New().Subtract(24 * time.Hour)) // 返回: true
+func (t *Time) After(t2 *Time) bool {
+	if t == nil || t2 == nil {
+		return false
+	}
+	return t.tm.After(t2.tm)
+}
+
+// Equal 检查当前时间是否与另一个时间相等
+// 参数: t2 *Time - 要比较的另一个时间
+// 返回: bool - 如果当前时间与t2相等返回true，否则返回false
+// 示例: now := m_time.New(); now.Equal(now) // 返回: true
+func (t *Time) Equal(t2 *Time) bool {
+	if t == nil || t2 == nil {
+		return t == t2
+	}
+	return t.tm.Equal(t2.tm)
+}
+
+// Weekday 获取当前时间是星期几
+// 返回: time.Weekday - 星期几（0-6，周日为0）
+// 示例: m_time.New().Weekday() // 如周一返回 time.Monday
+func (t *Time) Weekday() time.Weekday {
+	if t == nil {
+		return time.Sunday
+	}
+	return t.tm.Weekday()
+}
+
+// StartOfWeek 获取本周的开始时间（周一0点）
+// 返回: *Time - 本周开始时间
+// 示例: m_time.New().StartOfWeek().Format("2006-01-02 15:04:05")
+func (t *Time) StartOfWeek() *Time {
+	if t == nil {
+		return nil
+	}
+	wd := t.tm.Weekday()
+	// 调整为周一为一周的开始
+	if wd == time.Sunday {
+		wd = 6
+	} else {
+		wd--
+	}
+	daysToSubtract := time.Duration(wd) * 24 * time.Hour
+	return &Time{tm: t.tm.Add(-daysToSubtract).Truncate(24 * time.Hour)}
+}
+
+// Parse 按照指定格式解析时间字符串
+// 参数: layout string - 时间格式
+//
+//	s string - 时间字符串
+//
+// 返回: (*Time, error) - 解析后的Time实例和可能的错误
+// 示例: m_time.Parse("2006-01-02", "2023-10-15")
+func Parse(layout, s string) (*Time, error) {
+	t, err := time.Parse(layout, s)
+	if err != nil {
+		return nil, err
+	}
+	return &Time{tm: t}, nil
+}
+
+// ParseInLocation 按照指定格式和时区解析时间字符串
+// 参数: layout string - 时间格式
+//
+//	s string - 时间字符串
+//	loc *time.Location - 时区
+//
+// 返回: (*Time, error) - 解析后的Time实例和可能的错误
+// 示例: loc, _ := time.LoadLocation("Asia/Shanghai"); m_time.ParseInLocation("2006-01-02", "2023-10-15", loc)
+func ParseInLocation(layout, s string, loc *time.Location) (*Time, error) {
+	t, err := time.ParseInLocation(layout, s, loc)
+	if err != nil {
+		return nil, err
+	}
+	return &Time{tm: t}, nil
+}
+
+// maxInt 返回两个整数中的较大值
 // 小工具：避免除以 0
+// 参数: a, b int - 要比较的两个整数
+// 返回: int - 较大的整数
+// 示例: maxInt(3, 5) // 返回: 5
+//
+//	maxInt(-1, -5) // 返回: -1
 func maxInt(a, b int) int {
 	if a > b {
 		return a
