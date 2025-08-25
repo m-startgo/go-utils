@@ -18,10 +18,16 @@ import (
 
 // 辅助：归一化单位
 func normalizeUnit(u string) string {
-	switch strings.ToLower(strings.TrimSpace(u)) {
+	// 保留原始输入的大小写判断，以便支持 Dayjs 风格的 'M' 表示 month
+	s := strings.TrimSpace(u)
+	if s == "M" {
+		return "month"
+	}
+	normalized := strings.ToLower(s)
+	switch normalized {
 	case "y", "yr", "yrs", "years", "year":
 		return "year"
-	case "M", "mon", "months", "month":
+	case "mon", "months", "month":
 		return "month"
 	case "d", "day", "days":
 		return "day"
@@ -38,7 +44,7 @@ func normalizeUnit(u string) string {
 	case "ns", "nanosecond", "nanoseconds":
 		return "nanosecond"
 	default:
-		return u
+		return normalized
 	}
 }
 
@@ -126,12 +132,12 @@ func (t *Time) EndOf(unit string) *Time {
 	}
 	switch normalizeUnit(unit) {
 	case "year":
-		return &Time{tm: time.Date(t.tm.Year(), 12, 31, 23, 59, 59, int(time.Nanosecond*time.Duration(999999999)), t.tm.Location())}
+		return &Time{tm: time.Date(t.tm.Year(), 12, 31, 23, 59, 59, 999999999, t.tm.Location())}
 	case "month":
-		// 先取下月的第一天的 00:00:00，然后减 1 纳秒，得到本月最后一纳秒
+		// 先取下月的第一天的 00:00:00，然后减 1 纳秒，得到本月最后一纳秒；直接返回该时刻
 		firstOfNext := time.Date(t.tm.Year(), t.tm.Month(), 1, 0, 0, 0, 0, t.tm.Location()).AddDate(0, 1, 0)
 		last := firstOfNext.Add(-time.Nanosecond)
-		return &Time{tm: time.Date(last.Year(), last.Month(), last.Day(), 23, 59, 59, 999999999, t.tm.Location())}
+		return &Time{tm: last}
 	case "day":
 		return &Time{tm: time.Date(t.tm.Year(), t.tm.Month(), t.tm.Day(), 23, 59, 59, 999999999, t.tm.Location())}
 	case "hour":
