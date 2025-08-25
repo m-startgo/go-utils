@@ -1,27 +1,14 @@
 package m_time
 
-/*
-
-我想封装一个 m_time 包，提供一些时间处理的工具函数
-
-并且使用 araddon/dateparse 库来解析日期字符串。
-请帮我写出这个包的代码。
-
-代码一定要精简，尽量依赖go标准库去实现。
-
-我不太喜欢 go 语言这样的   "2006-01-02 15:04:05.000 -07:00"
-我更加喜欢 YYYY-MM-DD HH:mm:ss.SSSSSS ±HH:MM 这样的方式，你可以封装处理一下
-
-
-代码一定要精简，基于官方标准库。运行速度要快。
-Api 可以参考 dayjs  一些深度的API无需支持，只要涉及到常用的 一些方法 就行。
-
-
-*/
+// m_time 提供几个常用的时间工具：解析（支持常见字符串与时间戳）、格式化
+// 及一些便捷方法（开始/结束时间、加减天数/小时等）。默认尽量基于标准库实现。
 
 import (
 	"fmt"
+	"math"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/araddon/dateparse"
@@ -35,11 +22,51 @@ type Time struct {
 	t time.Time
 }
 
-// Parse 使用 araddon/dateparse 尝试解析任意常见日期字符串
-func Parse(s string) (Time, error) {
+// DefaultLocation 控制数字时间戳解析后使用的时区（默认 UTC）。
+// 如果想使用本地时区，调用 SetDefaultLocation(time.Local)。
+var defaultLoc atomic.Value
+
+func init() {
+	defaultLoc.Store(time.UTC)
+}
+
+// DefaultLocation 返回当前默认时区（用于数值时间戳解析），默认 UTC。
+func DefaultLocation() *time.Location { return defaultLoc.Load().(*time.Location) }
+
+// SetDefaultLocation 设置数字时间戳解析后的默认时区，传入 nil 恢复为 UTC。
+func SetDefaultLocation(loc *time.Location) {
+	if loc == nil {
+		defaultLoc.Store(time.UTC)
+		return
+	}
+	defaultLoc.Store(loc)
+}
+
+// Parse 接受多种输入并尝试解析为时间：
+// 支持：
+// - string（任意可被 dateparse 识别的格式）
+// - 数字字符串（表示秒/毫秒/微秒/纳秒 时间戳）
+// - 整数类型/无符号整数/浮点数（表示秒或带小数的秒）
+// 示例：
+//
+//	Parse("2020-01-02 15:04:05")
+//	Parse(1609459200000)           // 13 位毫秒时间戳
+//	Parse("1609459200000")       // 数字字符串（毫秒）
+//	Parse(1609459200.123)         // 带小数的秒
+//
+// ParseString 解析字符串格式的时间，优先将纯数字字符串视为时间戳
+func ParseString(s string) (Time, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return Time{}, fmt.Errorf("empty time string")
+	}
+	if isNumericString(s) {
+		if i, err := strconv.ParseInt(s, 10, 64); err == nil {
+			return Time{t: unixFromInt64(i)}, nil
+		}
+		if f, err := strconv.ParseFloat(s, 64); err == nil {
+			return Time{t: timeFromFloatSeconds(f)}, nil
+		}
 	}
 	tt, err := dateparse.ParseAny(s)
 	if err != nil {
@@ -48,13 +75,135 @@ func Parse(s string) (Time, error) {
 	return Time{t: tt}, nil
 }
 
-// MustParse 解析失败时 panic，方便测试或内联使用
-func MustParse(s string) Time {
-	t, err := Parse(s)
-	if err != nil {
-		panic(err)
+// ParseInt64 按整数时间戳解析（自动判断秒/毫秒/微秒/纳秒）
+func ParseInt64(n int64) (Time, error) { return Time{t: unixFromInt64(n)}, nil }
+
+// ParseFloat64 按带小数的秒解析为时间
+func ParseFloat64(f float64) (Time, error) { return Time{t: timeFromFloatSeconds(f)}, nil }
+
+// Parse 接受任意类型输入并路由到更具体的解析函数（兼容旧 API）
+func Parse(v any) (Time, error) {
+	if v == nil {
+		return Time{}, fmt.Errorf("nil value")
 	}
+	switch x := v.(type) {
+	case string:
+		return ParseString(x)
+	case int:
+		return ParseInt64(int64(x))
+	case int8:
+		return ParseInt64(int64(x))
+	case int16:
+		return ParseInt64(int64(x))
+	case int32:
+		return ParseInt64(int64(x))
+	case int64:
+		return ParseInt64(x)
+	case uint:
+		return ParseInt64(int64(x))
+	case uint8:
+		return ParseInt64(int64(x))
+	case uint16:
+		return ParseInt64(int64(x))
+	case uint32:
+		return ParseInt64(int64(x))
+	case uint64:
+		if x <= math.MaxInt64 {
+			return ParseInt64(int64(x))
+		}
+		return Time{}, fmt.Errorf("uint64 value too large")
+	case float32:
+		return ParseFloat64(float64(x))
+	case float64:
+		return ParseFloat64(x)
+	default:
+		s := fmt.Sprintf("%v", v)
+		if isNumericString(s) {
+			if i, err := strconv.ParseInt(s, 10, 64); err == nil {
+				return ParseInt64(i)
+			}
+			if f, err := strconv.ParseFloat(s, 64); err == nil {
+				return ParseFloat64(f)
+			}
+		}
+		return Time{}, fmt.Errorf("unsupported parse type: %T", v)
+	}
+}
+
+// MustParse 解析失败时返回零值（不再 panic），保留旧名称以兼容调用者。
+// 推荐在需要检查错误的场景使用 Parse。
+func MustParse(v any) Time {
+	t, _ := Parse(v)
 	return t
+}
+
+// isNumericString 判断字符串是否只包含数字（允许前导 -）
+func isNumericString(s string) bool {
+	if s == "" {
+		return false
+	}
+	if s[0] == '-' {
+		s = s[1:]
+	}
+	dot := false
+	for _, c := range s {
+		if c == '.' {
+			if dot {
+				return false
+			}
+			dot = true
+			continue
+		}
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// unixFromInt64 根据数字长度判断单位并返回 time.Time
+func unixFromInt64(n int64) time.Time {
+	// 通过数字位数判断： >=18 纳秒, >=16 微秒, >=13 毫秒, else 秒
+	s := strconv.FormatInt(n, 10)
+	if n < 0 {
+		s = s[1:]
+	}
+	d := len(s)
+	var tt time.Time
+	switch {
+	case d >= 18:
+		// 纳秒
+		tt = time.Unix(0, n)
+	case d >= 16:
+		// 微秒 -> 转为纳秒
+		tt = time.Unix(0, n*1000)
+	case d >= 13:
+		// 毫秒
+		sec := n / 1000
+		msec := n % 1000
+		tt = time.Unix(sec, msec*1e6)
+	default:
+		// 秒
+		tt = time.Unix(n, 0)
+	}
+	loc := DefaultLocation()
+	if loc == time.UTC {
+		return tt.UTC()
+	}
+	return tt.In(loc)
+}
+
+// timeFromFloatSeconds 将带小数的秒转换为 time.Time
+func timeFromFloatSeconds(f float64) time.Time {
+	sec := int64(math.Floor(f))
+	frac := f - float64(sec)
+	nsec := int64(math.Round(frac * 1e9))
+	tt := time.Unix(sec, nsec)
+	loc := DefaultLocation()
+	if loc == time.UTC {
+		return tt.UTC()
+	}
+	return tt.In(loc)
 }
 
 // Now 返回当前时间的封装
