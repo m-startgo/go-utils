@@ -1,13 +1,7 @@
 package m_time
 
-/*
-我想封装一些关于时间方面的工具函数库
-
-它的使用方式和API以及常用功能最好是可以和 dayjs 对齐
-
-你可以使用 github.com/araddon/dateparse 库来实现日期字符串解析相关的操作，这样可以帮我们节省大量的时间和精力
-
-*/
+// 封装时间工具函数库，API设计参考dayjs风格
+// 使用github.com/araddon/dateparse库进行日期字符串解析
 
 import (
 	"strings"
@@ -16,7 +10,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// 辅助：归一化单位
+// normalizeUnit 归一化时间单位
 func normalizeUnit(u string) string {
 	// 保留原始输入的大小写判断，以便支持 Dayjs 风格的 'M' 表示 month
 	s := strings.TrimSpace(u)
@@ -49,9 +43,9 @@ func normalizeUnit(u string) string {
 }
 
 // Format 格式化时间
-// 现在时间: m_time.New().Format("2006-01-02 15:04:05") // 输出: 2023-10-15 13:45:26
-// 指定时间: m_time.NewFromTime(time.Date(2023, 10, 15, 0, 0, 0, 0, time.Local)).Format("2006-01-02") // 输出: 2023-10-15
-// 解析字符串: t, _ := m_time.NewFromString("2023-10-15"); t.Format("2006/01/02") // 输出: 2023/10/15
+// 参数: layout string - 时间格式模板
+// 返回: string - 格式化后的时间字符串
+// 示例: m_time.New().Format("2006-01-02 15:04:05")
 func (t *Time) Format(layout string) string {
 	if t == nil {
 		return ""
@@ -62,11 +56,7 @@ func (t *Time) Format(layout string) string {
 // In 修改时间的时区
 // 参数: location *time.Location - 目标时区
 // 返回: *Time - 转换到指定时区后的新 Time 实例
-// 示例:
-// loc, _ := time.LoadLocation("America/New_York")
-// m_time.New().In(loc).Format("2006-01-02 15:04:05") // 输出: 当前时间的纽约时区时间
-// loc, _ := time.LoadLocation("Asia/Tokyo")
-// m_time.New().In(loc).Format("2006-01-02 15:04:05") // 输出: 当前时间的东京时区时间
+// 示例: loc, _ := time.LoadLocation("America/New_York"); m_time.New().In(loc).Format("2006-01-02 15:04:05")
 func (t *Time) In(location *time.Location) *Time {
 	if t == nil {
 		return nil
@@ -77,7 +67,7 @@ func (t *Time) In(location *time.Location) *Time {
 // Add 添加时间
 // 参数: d time.Duration - 要添加的时间长度
 // 返回: *Time - 添加时间后的新 Time 实例
-// 示例: m_time.New().Add(24 * time.Hour).Format("2006-01-02") // 输出: 当前日期的明天
+// 示例: m_time.New().Add(24 * time.Hour).Format("2006-01-02")
 func (t *Time) Add(d time.Duration) *Time {
 	if t == nil {
 		return nil
@@ -88,7 +78,7 @@ func (t *Time) Add(d time.Duration) *Time {
 // Subtract 减去时间
 // 参数: d time.Duration - 要减去的时间长度
 // 返回: *Time - 减去时间后的新 Time 实例
-// 示例: m_time.New().Subtract(24 * time.Hour).Format("2006-01-02") // 输出: 当前日期的昨天
+// 示例: m_time.New().Subtract(24 * time.Hour).Format("2006-01-02")
 func (t *Time) Subtract(d time.Duration) *Time {
 	if t == nil {
 		return nil
@@ -99,7 +89,7 @@ func (t *Time) Subtract(d time.Duration) *Time {
 // StartOf 获取时间的开始
 // 参数: unit string - 时间单位(year, month, day, hour, minute, second)
 // 返回: *Time - 对应时间单位开始的新 Time 实例
-// 示例: m_time.New().StartOf("day").Format("2006-01-02 15:04:05") // 输出: 当前日期的 00:00:00
+// 示例: m_time.New().StartOf("day").Format("2006-01-02 15:04:05")
 func (t *Time) StartOf(unit string) *Time {
 	if t == nil {
 		return nil
@@ -125,7 +115,7 @@ func (t *Time) StartOf(unit string) *Time {
 // EndOf 获取时间的结束
 // 参数: unit string - 时间单位(year, month, day, hour, minute, second)
 // 返回: *Time - 对应时间单位结束的新 Time 实例
-// 示例: m_time.New().EndOf("day").Format("2006-01-02 15:04:05") // 输出: 当前日期的 23:59:59.999999999
+// 示例: m_time.New().EndOf("day").Format("2006-01-02 15:04:05")
 func (t *Time) EndOf(unit string) *Time {
 	if t == nil {
 		return nil
@@ -153,7 +143,7 @@ func (t *Time) EndOf(unit string) *Time {
 
 // DaysInMonth 获取月份的天数
 // 返回: int - 月份的天数
-// 示例: m_time.New().DaysInMonth() // 输出: 31(取决于当前月份)
+// 示例: m_time.New().DaysInMonth()
 func (t *Time) DaysInMonth() int {
 	if t == nil {
 		return 0
