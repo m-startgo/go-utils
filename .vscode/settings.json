@@ -1,3 +1,16 @@
 {
-  "cSpell.words": ["mpath", "mstr", "mverify", "Println", "startgo"]
+  "cSpell.words": [
+    "mcron",
+    "mcycle",
+    "mfile",
+    "mhttp",
+    "mjson",
+    "mlog",
+    "mmath",
+    "mpath",
+    "mstr",
+    "mverify",
+    "Println",
+    "startgo"
+  ]
 }
