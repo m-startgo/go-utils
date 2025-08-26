@@ -57,12 +57,6 @@ func TestUtilsBasics(t *testing.T) {
 	if err != nil || abs == "" {
 		// Abs may fail for relative paths on some envs, don't strict fail on err, but ensure string returned when no err
 	}
-	if Base(p) != "c.txt" {
-		t.Fatalf("base wrong: %s", Base(p))
-	}
-	if Ext(p) != ".txt" {
-		t.Fatalf("ext wrong: %s", Ext(p))
-	}
 }
 
 func TestEnsureReadWriteList(t *testing.T) {

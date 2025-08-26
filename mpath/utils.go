@@ -3,7 +3,6 @@ package mpath
 import (
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // Join 将路径片段安全拼接为一个路径
@@ -55,19 +54,4 @@ func ListFiles(dir string) ([]string, error) {
 		}
 	}
 	return out, nil
-}
-
-// Base 返回文件名（带扩展名）
-func Base(p string) string {
-	return filepath.Base(p)
-}
-
-// Ext 返回文件扩展名（包含点）
-func Ext(p string) string {
-	return filepath.Ext(p)
-}
-
-// HasExt 判断文件是否具有给定扩展（不区分大小写）
-func HasExt(p, ext string) bool {
-	return strings.EqualFold(filepath.Ext(p), ext)
 }
