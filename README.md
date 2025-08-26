@@ -15,7 +15,7 @@ go get -u github.com/m-startgo/go-utils@latest
 ## 安装指定版本
 
 ```bash
-go get -u github.com/m-startgo/go-utils@v0.0.8
+go get -u github.com/m-startgo/go-utils@v0.0.9
 ```
 
 ## 使用示例
