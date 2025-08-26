@@ -35,23 +35,3 @@ func EnsureDir(dir string, perm os.FileMode) (bool, error) {
 	}
 	return false, err
 }
-
-// ListFiles 列出目录下（不递归）的文件名（不包含目录）
-func ListFiles(dir string) ([]string, error) {
-	f, err := os.Open(dir)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	fis, err := f.Readdir(-1)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]string, 0, len(fis))
-	for _, fi := range fis {
-		if !fi.IsDir() {
-			out = append(out, fi.Name())
-		}
-	}
-	return out, nil
-}

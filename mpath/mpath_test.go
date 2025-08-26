@@ -69,13 +69,4 @@ func TestEnsureReadWriteList(t *testing.T) {
 	if !created {
 		t.Fatalf("should be created")
 	}
-
-	// list
-	files, err := ListFiles(dir)
-	if err != nil {
-		t.Fatalf("list files err: %v", err)
-	}
-	if len(files) != 1 || files[0] != "a.txt" {
-		t.Fatalf("list files unexpected: %#v", files)
-	}
 }
