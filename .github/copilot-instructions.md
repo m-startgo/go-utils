@@ -4,18 +4,18 @@
 
 ## 必知要点（浓缩）
 
-- 代码按功能分包，目录以 `m_` 开头（例如 `m_str`, `m_time`, `m_math`）。
+- 代码按功能分包，目录以 `m` 开头（例如 `mstr`, `mtime`, `mmath`）。
 - 封装优先：很多包是对标准库或第三方库的轻量封装（见 `m_math/decimal.go` 的 `Decimal.Value()`）。
 - 兼容策略：若解析失败通常返回零值（epoch），不要在未说明的情况下改为返回 error（见 `m_time/get.go`）。
 
 ## 快速示例（常引用）
 
-- 模板替换：`m_str/TplFormat.go` 使用 `os.Expand`，不存在 key 时返回空字符串。
-- 时间工具：`m_time/get.go` 提供 `NowDefaultString()`、`ParseToTimeWithMillisOffset()` 等，注意行为与错误处理。
+- 模板替换：`mstr/TplFormat.go` 使用 `os.Expand`，不存在 key 时返回空字符串。
+- 时间工具：`mtime/get.go` 提供 `NowDefaultString()`、`ParseToTimeWithMillisOffset()` 等，注意行为与错误处理。
 
 ## 编辑规则（必遵）
 
-1. 在对应 `m_*` 包内实现改动，保持包名一致。
+1. 在对应 `m*` 包内实现改动，保持包名一致（例如 `mstr`, `mtime`, `mmath`）。
 2. 修改封装类型时保留原有访问器（例如 `Value()`），以免破坏调用方。
 3. 有意改变错误语义（零值->error）必须在 PR 中说明并更新测试。
 4. 每个功能改动提交对应的 `_test.go`（至少：正常路径 + 一个边界/失败用例），并在本地运行 `go test ./...` 验证。
@@ -24,7 +24,7 @@
 
 ```bash
 go test ./...
-go test ./m_str -v
+go test ./mstr -v
 go vet ./...
 go get -u github.com/m-startgo/go-utils@latest
 ```
