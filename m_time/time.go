@@ -60,7 +60,10 @@ func SetDefaultLocation(loc *time.Location) {
 //	Parse("1609459200000")       // 数字字符串（毫秒）
 //	Parse(1609459200.123)         // 带小数的秒
 //
-// ParseString 解析字符串格式的时间，优先将纯数字字符串视为时间戳
+// ParseString 解析字符串为 Time：
+// - 如果字符串为纯数字（可带小数点、可有正负号），优先按时间戳解析（自动识别秒/毫秒/微秒/纳秒/带小数秒）
+// - 否则使用第三方解析器尝试解析任意常见时间格式
+// 返回解析后的 Time 或解析错误。
 func ParseString(s string) (Time, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -81,13 +84,17 @@ func ParseString(s string) (Time, error) {
 	return Time{t: tt}, nil
 }
 
-// ParseInt64 按整数时间戳解析（自动判断秒/毫秒/微秒/纳秒）
+// ParseInt64 按整数时间戳解析并返回 Time。函数会根据数字位数自动判断单位（秒/毫秒/微秒/纳秒）。
+// 示例：ParseInt64(1609459200000) // 13 位毫秒
 func ParseInt64(n int64) (Time, error) { return Time{t: unixFromInt64(n)}, nil }
 
-// ParseFloat64 按带小数的秒解析为时间
+// ParseFloat64 按带小数的秒数解析为 Time（小数部分表示秒的小数部分）。
+// 示例：ParseFloat64(1609459200.123) 表示秒 + 小数秒
 func ParseFloat64(f float64) (Time, error) { return Time{t: timeFromFloatSeconds(f)}, nil }
 
-// Parse 接受任意类型输入并路由到更具体的解析函数（兼容旧 API）
+// Parse 尝试从任意支持的类型解析为 Time：
+// 支持 string、整型、无符号整型、浮点型等。对于不能直接识别的类型，会使用 fmt.Sprintf 作为后备并尝试按数字或字符串解析。
+// 返回解析结果或错误。
 func Parse(v any) (Time, error) {
 	if v == nil {
 		return Time{}, fmt.Errorf("nil value")
@@ -136,14 +143,15 @@ func Parse(v any) (Time, error) {
 	}
 }
 
-// MustParse 解析失败时返回零值（不再 panic），保留旧名称以兼容调用者。
-// 推荐在需要检查错误的场景使用 Parse。
+// MustParse 是 Parse 的便捷包装：解析失败时返回零值 Time（不再 panic）。
+// 建议在需要明确错误处理的场景使用 Parse，并避免依赖 MustParse 隐式吞错。
 func MustParse(v any) Time {
 	t, _ := Parse(v)
 	return t
 }
 
-// isNumericString 判断字符串是否只包含数字（允许前导 -）
+// isNumericString 判断字符串是否为“数字样式”的字符串：允许前导 + 或 -，以及单个小数点。
+// 返回 true 表示字符串可以被视为数字（整数或小数）。
 func isNumericString(s string) bool {
 	if s == "" {
 		return false
@@ -169,7 +177,12 @@ func isNumericString(s string) bool {
 	return digits > 0
 }
 
-// unixFromInt64 根据数字长度判断单位并返回 time.Time
+// unixFromInt64 根据整数时间戳的位数推断时间单位，并返回对应的 time.Time：
+// - >=18 位：视为纳秒
+// - >=16 位：视为微秒
+// - >=13 位：视为毫秒
+// - 否则：视为秒
+// 解析后会根据 DefaultLocation 返回 UTC 或指定时区的时间值。
 func unixFromInt64(n int64) time.Time {
 	// 通过数字位数判断： >=18 纳秒, >=16 微秒, >=13 毫秒, else 秒
 	abs := n
@@ -201,7 +214,8 @@ func unixFromInt64(n int64) time.Time {
 	return tt.In(loc)
 }
 
-// timeFromFloatSeconds 将带小数的秒转换为 time.Time
+// timeFromFloatSeconds 将带小数的秒数（秒 + 小数）转换为 time.Time，并应用 DefaultLocation。
+// 示例：1609459200.123 表示 1609459200 秒 + 0.123 秒。
 func timeFromFloatSeconds(f float64) time.Time {
 	sec := int64(math.Floor(f))
 	frac := f - float64(sec)
@@ -214,15 +228,15 @@ func timeFromFloatSeconds(f float64) time.Time {
 	return tt.In(loc)
 }
 
-// FromTime 包装一个标准 time.Time
+// FromTime 包装一个标准 time.Time 为本包的 Time 类型，方便链式调用。
 func FromTime(tt time.Time) Time { return Time{t: tt} }
 
-// ToTime 返回底层 time.Time
+// ToTime 返回底层的标准 time.Time。
 func (t Time) ToTime() time.Time { return t.t }
 
-// Format 支持两种形式：
-// - 传入空字符串或 DefaultToken 则使用默认的 token
-// - 传入类似 "YYYY-MM-DD HH:mm:ss" 的 token，会被映射为 go layout
+// Format 使用自定义 token 或默认 token 将 Time 格式化为字符串：
+// - 传入空字符串或 DefaultToken 使用默认格式
+// - 传入类似 "YYYY-MM-DD HH:mm:ss" 的 token，将被映射为 Go 的 layout 进行格式化
 func (t Time) Format(token string) string {
 	if token == "" {
 		token = DefaultToken
@@ -231,26 +245,26 @@ func (t Time) Format(token string) string {
 	return t.t.Format(layout)
 }
 
-// String 实现 fmt.Stringer，使用默认格式
+// String 实现 fmt.Stringer，等价于使用默认 token 的 Format。
 func (t Time) String() string { return t.Format(DefaultToken) }
 
-// Add 增加 duration
+// Add 返回在当前 Time 上加上指定的 duration 后的新 Time（不修改原值）。
 func (t Time) Add(d time.Duration) Time { return Time{t: t.t.Add(d)} }
 
-// AddDays 快捷方法
+// AddDays 在当前 Time 上增加指定天数（整天）。
 func (t Time) AddDays(days int) Time { return Time{t: t.t.Add(time.Duration(days) * 24 * time.Hour)} }
 
-// AddHours 快捷方法
+// AddHours 在当前 Time 上增加指定小时数（整小时）。
 func (t Time) AddHours(h int) Time { return Time{t: t.t.Add(time.Duration(h) * time.Hour)} }
 
-// StartOfDay 返回当天零点
+// StartOfDay 返回当前时间对应日期的 00:00:00（同一时区）。
 func (t Time) StartOfDay() Time {
 	y, m, d := t.t.Date()
 	loc := t.t.Location()
 	return Time{t: time.Date(y, m, d, 0, 0, 0, 0, loc)}
 }
 
-// EndOfDay 返回当天 23:59:59.999999
+// EndOfDay 返回当前时间对应日期的末时刻（23:59:59.999999），精度到微秒，保留原时区。
 func (t Time) EndOfDay() Time {
 	y, m, d := t.t.Date()
 	loc := t.t.Location()
@@ -258,33 +272,34 @@ func (t Time) EndOfDay() Time {
 	return Time{t: time.Date(y, m, d, 23, 59, 59, endOfDayNsec, loc)}
 }
 
-// IsSameDay 判断是否同一天（本地时区）
+// IsSameDay 判断两个 Time 是否处于同一日期（按各自时区的年月日判断）。
 func (t Time) IsSameDay(o Time) bool {
 	y1, m1, d1 := t.t.Date()
 	y2, m2, d2 := o.t.Date()
 	return y1 == y2 && m1 == m2 && d1 == d2
 }
 
-// Diff 返回 t - o 的 duration
+// Diff 返回 t - o 的 duration（time.Duration）。
 func (t Time) Diff(o Time) time.Duration { return t.t.Sub(o.t) }
 
-// Unix 返回秒级时间戳
+// Unix 返回秒级时间戳（等价于 time.Time.Unix）。
 func (t Time) Unix() int64 { return t.t.Unix() }
 
-// UnixNano 返回纳秒时间戳
+// UnixNano 返回纳秒级时间戳（等价于 time.Time.UnixNano）。
 func (t Time) UnixNano() int64 { return t.t.UnixNano() }
 
-// UTC 转换为 UTC
+// UTC 返回转换为 UTC 时区的新 Time。
 func (t Time) UTC() Time { return Time{t: t.t.UTC()} }
 
-// Local 转换为本地时间
+// Local 返回转换为本地时区的新 Time。
 func (t Time) Local() Time { return Time{t: t.t.Local()} }
 
-// tokenToLayout 将常见 token 映射为 go time layout，支持部分 dayjs 风格 token
+// tokenToLayout 将常见 token 映射为 Go 的时间 layout，支持部分 dayjs 风格 token：
+// 支持 token 示例：YYYY, MM, DD, HH, mm, ss, SSS, SSSSSS, ±HH:MM
 func tokenToLayout(token string) string {
 	// 优先处理 SSSSSS
 	r := token
-	// 保证 ±HH:MM 映射为 -07:00
+	// 保证 ±HH:MM 映射为 -07:00（Go layout 的时区偏移形式）
 	r = strings.ReplaceAll(r, "±HH:MM", "-07:00")
 	// 有顺序地替换其他 token
 	replacements := []struct{ old, new string }{
