@@ -31,7 +31,13 @@ func init() {
 }
 
 // DefaultLocation 返回当前默认时区（用于数值时间戳解析），默认 UTC。
-func DefaultLocation() *time.Location { return defaultLoc.Load().(*time.Location) }
+func DefaultLocation() *time.Location {
+	v := defaultLoc.Load()
+	if loc, ok := v.(*time.Location); ok {
+		return loc
+	}
+	return time.UTC
+}
 
 // SetDefaultLocation 设置数字时间戳解析后的默认时区，传入 nil 恢复为 UTC。
 func SetDefaultLocation(loc *time.Location) {
@@ -142,10 +148,11 @@ func isNumericString(s string) bool {
 	if s == "" {
 		return false
 	}
-	if s[0] == '-' {
+	if s[0] == '+' || s[0] == '-' {
 		s = s[1:]
 	}
 	dot := false
+	digits := 0
 	for _, c := range s {
 		if c == '.' {
 			if dot {
@@ -157,18 +164,19 @@ func isNumericString(s string) bool {
 		if c < '0' || c > '9' {
 			return false
 		}
+		digits++
 	}
-	return true
+	return digits > 0
 }
 
 // unixFromInt64 根据数字长度判断单位并返回 time.Time
 func unixFromInt64(n int64) time.Time {
 	// 通过数字位数判断： >=18 纳秒, >=16 微秒, >=13 毫秒, else 秒
-	s := strconv.FormatInt(n, 10)
-	if n < 0 {
-		s = s[1:]
+	abs := n
+	if abs < 0 {
+		abs = -abs
 	}
-	d := len(s)
+	d := len(strconv.FormatInt(abs, 10))
 	var tt time.Time
 	switch {
 	case d >= 18:
@@ -252,7 +260,8 @@ func (t Time) StartOfDay() Time {
 func (t Time) EndOfDay() Time {
 	y, m, d := t.t.Date()
 	loc := t.t.Location()
-	return Time{t: time.Date(y, m, d, 23, 59, 59, int(time.Microsecond*999999), loc)}
+	const endOfDayNsec = 999999 * int(time.Microsecond)
+	return Time{t: time.Date(y, m, d, 23, 59, 59, endOfDayNsec, loc)}
 }
 
 // IsSameDay 判断是否同一天（本地时区）
