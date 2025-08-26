@@ -237,6 +237,12 @@ func (t Time) Format(token string) string {
 	return t.t.Format(layout)
 }
 
+// FormatDefault 返回默认的无参数格式化，格式为 "YYYY-MM-DDTHH:mm:ss"
+// 例如: 2020-01-02T15:04:05
+func (t Time) FormatDefault() string {
+	return t.Format("YYYY-MM-DDTHH:mm:ss")
+}
+
 // String 实现 fmt.Stringer，使用默认格式
 func (t Time) String() string { return t.Format(DefaultToken) }
 
@@ -311,3 +317,11 @@ func tokenToLayout(token string) string {
 	}
 	return r
 }
+
+// MillisPer... 常量表示毫秒级别的时间长度，命名更语义化且便于直接使用。
+const (
+	MillisPerSecond int64 = 1000
+	MillisPerMinute int64 = 60 * MillisPerSecond
+	MillisPerHour   int64 = 60 * MillisPerMinute
+	MillisPerDay    int64 = 24 * MillisPerHour
+)
