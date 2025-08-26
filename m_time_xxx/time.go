@@ -214,12 +214,6 @@ func timeFromFloatSeconds(f float64) time.Time {
 	return tt.In(loc)
 }
 
-// Now 返回当前时间的封装
-func Now() Time { return Time{t: time.Now()} }
-
-// NowUnixMilli 返回当前时间的毫秒时间戳（13 位）
-func NowUnixMilli() int64 { return time.Now().UnixNano() / 1e6 }
-
 // FromTime 包装一个标准 time.Time
 func FromTime(tt time.Time) Time { return Time{t: tt} }
 
@@ -235,12 +229,6 @@ func (t Time) Format(token string) string {
 	}
 	layout := tokenToLayout(token)
 	return t.t.Format(layout)
-}
-
-// FormatDefault 返回默认的无参数格式化，格式为 "YYYY-MM-DDTHH:mm:ss"
-// 例如: 2020-01-02T15:04:05
-func (t Time) FormatDefault() string {
-	return t.Format("YYYY-MM-DDTHH:mm:ss")
 }
 
 // String 实现 fmt.Stringer，使用默认格式
@@ -285,9 +273,6 @@ func (t Time) Unix() int64 { return t.t.Unix() }
 
 // UnixNano 返回纳秒时间戳
 func (t Time) UnixNano() int64 { return t.t.UnixNano() }
-
-// UnixMilli 返回以毫秒为单位的时间戳（13 位）
-func (t Time) UnixMilli() int64 { return t.t.UnixNano() / 1e6 }
 
 // UTC 转换为 UTC
 func (t Time) UTC() Time { return Time{t: t.t.UTC()} }
