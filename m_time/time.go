@@ -209,6 +209,9 @@ func timeFromFloatSeconds(f float64) time.Time {
 // Now 返回当前时间的封装
 func Now() Time { return Time{t: time.Now()} }
 
+// NowUnixMilli 返回当前时间的毫秒时间戳（13 位）
+func NowUnixMilli() int64 { return time.Now().UnixNano() / 1e6 }
+
 // FromTime 包装一个标准 time.Time
 func FromTime(tt time.Time) Time { return Time{t: tt} }
 
@@ -267,6 +270,9 @@ func (t Time) Unix() int64 { return t.t.Unix() }
 
 // UnixNano 返回纳秒时间戳
 func (t Time) UnixNano() int64 { return t.t.UnixNano() }
+
+// UnixMilli 返回以毫秒为单位的时间戳（13 位）
+func (t Time) UnixMilli() int64 { return t.t.UnixNano() / 1e6 }
 
 // UTC 转换为 UTC
 func (t Time) UTC() Time { return Time{t: t.t.UTC()} }

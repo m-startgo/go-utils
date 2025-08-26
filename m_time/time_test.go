@@ -171,3 +171,62 @@ func TestMoreEdgeCases(t *testing.T) {
 	}()
 	<-done
 }
+
+func TestUnixMilli(t *testing.T) {
+	// 从 Now() 构造并比较 Unix/UnixNano -> 毫秒
+	now := Now()
+	msFromMethod := now.UnixMilli()
+	msFromNano := now.UnixNano() / 1e6
+	if msFromMethod != msFromNano {
+		t.Fatalf("UnixMilli mismatch: method=%d nano/1e6=%d", msFromMethod, msFromNano)
+	}
+
+	// NowUnixMilli 与 Now().UnixMilli() 应该非常接近（允许少量时间差）
+	msNowFunc := NowUnixMilli()
+	diff := msNowFunc - (time.Now().UnixNano() / 1e6)
+	if diff < -1 || diff > 1 {
+		// 允许 1ms 误差窗口
+		t.Fatalf("NowUnixMilli out of expected range: got %d diff %d", msNowFunc, diff)
+	}
+}
+
+// go test -v -run Test_Mo7
+func Test_Mo7(t *testing.T) {
+	s := "2021-01-02 03:04:05"
+
+	timez, err := ParseString(s)
+	if err != nil {
+		t.Fatalf("ParseString failed: %v | %+v", err, timez)
+	}
+	s = "123456"
+	timez, err = ParseString(s)
+	if err != nil {
+		t.Fatalf("ParseString failed: %v | %+v", err, timez)
+	}
+
+	n := float64(123456)
+	time2, err := ParseFloat64(n)
+	if err != nil {
+		t.Fatalf("ParseFloat64 failed: %v | %+v", err, time2)
+	}
+
+	n2 := int64(123456)
+	time3, err := ParseInt64(n2)
+	if err != nil {
+		t.Fatalf("ParseFloat64 failed: %v | %+v", err, time3)
+	}
+
+	now := Now()
+
+	fnow := FromTime(now.ToTime())
+
+	if fnow != now {
+		t.Fatalf("FromTime failed: %v | %+v", fnow, now)
+	}
+
+	times := time2.Format("YYYY-MM-DDTHH:mm:ss")
+
+	if times != "1970-01-02T10:17:36" {
+		t.Fatalf("Format failed: %v | %+v", times, time2)
+	}
+}
