@@ -1,4 +1,4 @@
-package m_cron
+package mcron
 
 import (
 	"errors"

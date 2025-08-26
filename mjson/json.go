@@ -1,1 +1,1 @@
-package m_json
+package mjson

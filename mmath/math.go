@@ -1,4 +1,4 @@
-package m_math
+package mmath
 
 // Sum 多数求和，传入 0 个参数时返回 Zero
 func Sum(nums ...Decimal) Decimal {

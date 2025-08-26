@@ -1,4 +1,4 @@
-package m_time
+package mtime
 
 import (
 	"math"

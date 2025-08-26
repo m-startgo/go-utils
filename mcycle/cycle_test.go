@@ -1,4 +1,4 @@
-package m_cycle
+package mcycle
 
 import (
 	"sync/atomic"

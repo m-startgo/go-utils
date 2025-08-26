@@ -1,4 +1,4 @@
-package m_str
+package mstr
 
 import (
 	"testing"
