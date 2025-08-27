@@ -1,0 +1,89 @@
+package mjson
+
+import (
+	"strings"
+	"testing"
+)
+
+// 覆盖 ToByte 的正常与错误路径
+func TestToByte_NilAndUnmarshalable(t *testing.T) {
+	// nil 应返回错误
+	if _, err := ToByte(nil); err == nil {
+		t.Fatalf("expected error for nil input")
+	}
+
+	// 不可序列化类型（channel）应返回 marshal 错误
+	ch := make(chan int)
+	if _, err := ToByte(ch); err == nil {
+		t.Fatalf("expected marshal error for channel type")
+	} else if !strings.Contains(err.Error(), "marshal") && !strings.Contains(err.Error(), "unsupported") {
+		t.Fatalf("unexpected error message: %v", err)
+	}
+}
+
+func TestToStr_And_IndentJson(t *testing.T) {
+	// 简单结构体应能被序列化为字符串
+	type S struct {
+		A int `json:"a"`
+		B int `json:"b"`
+	}
+	s := S{A: 1, B: 2}
+	str := ToStr(s)
+	if !strings.Contains(str, "\"a\"") || !strings.Contains(str, "1") {
+		t.Fatalf("ToStr 返回的 JSON 不包含预期内容: %s", str)
+	}
+
+	ind := IndentJson(s)
+	if ind == "{}" {
+		t.Fatalf("IndentJson 在有效输入上返回了错误默认值: %s", ind)
+	}
+	if !strings.Contains(ind, "\"a\": 1") || !strings.Contains(ind, "\"b\": 2") {
+		t.Fatalf("IndentJson 返回格式不正确: %s", ind)
+	}
+
+	// 对不可序列化类型，ToStr/IndentJson 应返回默认 "{}"
+	ch := make(chan int)
+	if ToStr(ch) != "{}" {
+		t.Fatalf("ToStr 对不可序列化类型应返回 '{}'，实际: %s", ToStr(ch))
+	}
+	if IndentJson(ch) != "{}" {
+		t.Fatalf("IndentJson 对不可序列化类型应返回 '{}'，实际: %s", IndentJson(ch))
+	}
+}
+
+func TestToMap_SuccessAndNil(t *testing.T) {
+	// 正常情况：结构体 -> map，数值会被解为 float64
+	type T struct {
+		X int `json:"x"`
+	}
+	in := T{X: 5}
+	m, err := ToMap(in)
+	if err != nil {
+		t.Fatalf("ToMap 正常输入返回错误: %v", err)
+	}
+	v, ok := m["x"]
+	if !ok {
+		t.Fatalf("ToMap 返回的 map 缺少键 'x'")
+	}
+	// json.Unmarshal 到 map[string]any 时数字为 float64
+	fv, ok := v.(float64)
+	if !ok || fv != 5 {
+		t.Fatalf("ToMap 返回的值类型和值不正确: %#v", v)
+	}
+
+	// nil 输入应返回错误
+	if _, err := ToMap(nil); err == nil {
+		t.Fatalf("ToMap 对 nil 输入应返回错误")
+	}
+}
+
+func TestPrintAny_ReturnsIndentString(t *testing.T) {
+	type A struct {
+		N int `json:"n"`
+	}
+	a := A{N: 3}
+	res := PrintAny(a)
+	if !strings.Contains(res, "\"n\": 3") {
+		t.Fatalf("PrintAny 返回的字符串不包含预期内容: %s", res)
+	}
+}
