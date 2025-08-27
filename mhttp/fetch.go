@@ -1,241 +1,183 @@
 package mhttp
 
+/*
+我想基于 github.com/gocolly/colly/v2 封装一个请求库
+
+
+可以像如下这样调用
+
+resData,err:= NewFetch({
+	URL: "http://www.test.com",
+	Data: []byte,
+	DataMap: map[string]any,
+	Params: map[string]string,
+	Headers: map[string]string,
+	Timeout: 10,
+	Retry: 3,
+	RetryDelay: 2,
+}).Get()
+
+传递了 Data 则会忽略 DataMap
+Params 则代表在 URL 后面拼接的参数
+
+上述的参数名字和 key 名 你都可以随意修改，我只是给你一个例子，
+要支持 Get 和 Post 两种请求方式
+
+*/
+
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/gocolly/colly/v2"
 )
 
-// RequestConfig 请求配置，用于创建 HTTP 请求。
+// FetchOptions 请求选项
+type FetchOptions struct {
+	URL        string
+	Data       []byte
+	DataMap    map[string]any
+	Params     map[string]string
+	Headers    map[string]string
+	Timeout    int // seconds
+	Retry      int
+	RetryDelay int // seconds
+	Method     string
+}
+
+// Fetch 请求封装
+type Fetch struct {
+	opts FetchOptions
+}
+
+// NewFetch 创建一个 Fetch 实例
+// 示例:
 //
-// 字段说明：
-//   - URL: 请求 URL 地址（必填）
-//   - Params: URL 查询参数（可选）
-//   - Data: 请求体数据（可选，POST 请求使用）
-//   - Header: 请求头信息（可选）
-//   - Timeout: 请求超时时间（单位：秒，默认 10）
-//   - Retry: 请求重试次数（可选，默认 0）
-//   - RetryDelay: 重试延迟时间（单位：秒，默认 1）
-type RequestConfig struct {
-	URL        string            `json:"url"`
-	Params     map[string]any    `json:"params"`
-	Data       map[string]any    `json:"data"`
-	Header     map[string]string `json:"header"`
-	Timeout    int               `json:"timeout"`
-	Retry      int               `json:"retry"`
-	RetryDelay int               `json:"retryDelay"`
+//	f := NewFetch(FetchOptions{URL: "http://example.com", Timeout: 10}).Get()
+func NewFetch(opts FetchOptions) *Fetch {
+	return &Fetch{opts: opts}
 }
 
-// Request 是一个简单的 HTTP 客户端封装，绑定了配置和 http.Client。
-type Request struct {
-	config *RequestConfig
-	client *http.Client
+// Get 发起 GET 请求，并返回响应 body
+func (f *Fetch) Get() ([]byte, error) {
+	f.opts.Method = http.MethodGet
+	return f.do()
 }
 
-// Fetch 根据 RequestConfig 创建并返回 *Request。
-//
-// 注意：如果配置无效会返回错误。函数会为未设置的 Timeout/RetryDelay 填充默认值。
-func Fetch(config RequestConfig) (*Request, error) {
-	// 验证必填参数
-	if config.URL == "" {
-		return nil, errors.New("请求 URL 不能为空")
-	}
-
-	// 设置默认值（与注释一致，默认 10 秒）
-	if config.Timeout <= 0 {
-		config.Timeout = 10
-	}
-	if config.RetryDelay <= 0 {
-		config.RetryDelay = 1
-	}
-
-	// 创建 HTTP 客户端
-	client := &http.Client{
-		Timeout: time.Duration(config.Timeout) * time.Second,
-	}
-
-	return &Request{
-		config: &config,
-		client: client,
-	}, nil
+// Post 发起 POST 请求，并返回响应 body
+func (f *Fetch) Post() ([]byte, error) {
+	f.opts.Method = http.MethodPost
+	return f.do()
 }
 
-/*
-Get 发送GET请求
+// do 执行请求，并支持重试
+func (f *Fetch) do() ([]byte, error) {
+	opts := f.opts
 
-返回值：
-  - *Response: 响应信息
-  - error: 请求错误
-*/
-// Get 发送 GET 请求并返回响应。
-func (r *Request) Get() (*Response, error) {
-	return r.sendRequest("GET", nil)
-}
-
-// Response 封装 HTTP 响应信息。
-type Response struct {
-	StatusCode int
-	Header     http.Header
-	Body       []byte
-}
-
-/*
-Post 发送POST请求
-
-返回值：
-  - *Response: 响应信息
-  - error: 请求错误
-*/
-// Post 发送 POST 请求，自动根据 Content-Type 编码请求体（支持 JSON 与 form）。
-func (r *Request) Post() (*Response, error) {
-	var contentType string
-	if r.config.Header != nil {
-		contentType = r.config.Header["Content-Type"]
+	if opts.URL == "" {
+		return nil, errors.New("err:mhttp.Fetch|do|empty URL")
 	}
 
-	var bodyBytes []byte
-	// 根据 Content-Type 选择合适的序列化方式
-	if contentType == "application/x-www-form-urlencoded" {
-		formData := url.Values{}
-		if r.config.Data != nil {
-			for key, value := range r.config.Data {
-				formData.Add(key, fmt.Sprintf("%v", value))
+	// 构造 URL 和 params
+	u, err := url.Parse(opts.URL)
+	if err != nil {
+		return nil, err
+	}
+	if len(opts.Params) > 0 {
+		q := u.Query()
+		for k, v := range opts.Params {
+			q.Set(k, v)
+		}
+		u.RawQuery = q.Encode()
+	}
+
+	// body 构造：保存原始字节切片，避免传递 typed-nil 到接口引起 panic
+	var rawBody []byte
+	if opts.Method != http.MethodGet {
+		if len(opts.Data) > 0 {
+			rawBody = opts.Data
+		} else if opts.DataMap != nil {
+			jb, jerr := json.Marshal(opts.DataMap)
+			if jerr != nil {
+				return nil, jerr
+			}
+			rawBody = jb
+			// 如果用户未显式设置 Content-Type，则设置为 application/json
+			if opts.Headers == nil {
+				opts.Headers = map[string]string{"Content-Type": "application/json"}
+			} else {
+				if _, ok := opts.Headers["Content-Type"]; !ok {
+					opts.Headers["Content-Type"] = "application/json"
+				}
 			}
 		}
-		bodyBytes = []byte(formData.Encode())
-	} else {
-		// 默认 JSON 处理
-		var jsonData []byte
-		var err error
-		if r.config.Data != nil {
-			jsonData, err = json.Marshal(r.config.Data)
-			if err != nil {
-				return nil, fmt.Errorf("请求数据 JSON 序列化失败: %w", err)
-			}
-		} else {
-			jsonData = []byte("{}")
-		}
-		bodyBytes = jsonData
 	}
 
-	return r.sendRequestBytes("POST", bodyBytes)
-}
-
-// sendRequestBytes 是 sendRequest 的变体，接受已序列化的请求体字节切片，
-// 以便在重试时可以为每次请求重新创建 io.Reader，避免 body 被消费后不可重用的问题。
-func (r *Request) sendRequestBytes(method string, bodyBytes []byte) (*Response, error) {
-	var bodyBuf *bytes.Buffer
-	if bodyBytes != nil {
-		bodyBuf = bytes.NewBuffer(bodyBytes)
-	}
-	return r.sendRequest(method, bodyBuf)
-}
-
-/*
-sendRequest 发送HTTP请求的内部实现
-
-参数：
-  - method: HTTP方法(GET/POST等)
-  - body: 请求体
-
-返回值：
-  - *Response: 响应信息
-  - error: 请求错误
-*/
-func (r *Request) sendRequest(method string, body *bytes.Buffer) (*Response, error) {
-	// 解析 URL
-	parsedUrl, urlErr := url.Parse(r.config.URL)
-	if urlErr != nil {
-		return nil, fmt.Errorf("URL 解析失败: %w", urlErr)
+	// 超时时间
+	tout := 30
+	if opts.Timeout > 0 {
+		tout = opts.Timeout
 	}
 
-	// 添加查询参数
-	query := parsedUrl.Query()
-	if r.config.Params != nil {
-		for key, value := range r.config.Params {
-			query.Add(key, fmt.Sprintf("%v", value))
-		}
+	// 重试参数
+	retry := opts.Retry
+	if retry < 0 {
+		retry = 0
 	}
-	parsedUrl.RawQuery = query.Encode()
-
-	// 为了支持重试并且保证请求体在每次重试都可用，需要在每次请求前重新创建 *http.Request。
-	maxRetries := r.config.Retry
+	retryDelay := opts.RetryDelay
+	if retryDelay <= 0 {
+		retryDelay = 1
+	}
 
 	var lastErr error
-	var resp *http.Response
+	var respBody []byte
 
-	// 将 body 的内容保存在字节切片中，供每次重试时创建新的 reader
-	var bodyBytes []byte
-	if body != nil {
-		bodyBytes = body.Bytes()
-	}
+	for attempt := 0; attempt <= retry; attempt++ {
+		// 每次都创建新的 collector，避免状态污染
+		c := colly.NewCollector()
+		c.SetRequestTimeout(time.Duration(tout) * time.Second)
 
-	for i := 0; i <= maxRetries; i++ {
-		// 为每次请求创建新的请求实例
-		var reqBody io.Reader
-		if bodyBytes != nil {
-			reqBody = bytes.NewReader(bodyBytes)
+		respBody = nil
+		c.OnResponse(func(r *colly.Response) {
+			// 保存最后一次响应
+			respBody = make([]byte, len(r.Body))
+			copy(respBody, r.Body)
+		})
+
+		// 转换 headers
+		hdr := http.Header{}
+		for k, v := range opts.Headers {
+			hdr.Set(k, v)
 		}
 
-		req, reqErr := http.NewRequest(method, parsedUrl.String(), reqBody)
-		if reqErr != nil {
-			return nil, fmt.Errorf("创建请求失败: %w", reqErr)
+		var body io.Reader
+		if rawBody != nil {
+			// 为每次请求创建新的 reader，接口为 io.Reader，避免 typed-nil
+			body = bytes.NewReader(rawBody)
 		}
 
-		// 设置请求头
-		if r.config.Header != nil {
-			for key, value := range r.config.Header {
-				req.Header.Set(key, value)
-			}
+		err = c.Request(opts.Method, u.String(), body, nil, hdr)
+		if err == nil && respBody != nil {
+			return respBody, nil
 		}
 
-		// 设置默认 Content-Type（仅在 POST 且未设置时）
-		if method == "POST" && req.Header.Get("Content-Type") == "" {
-			req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		if err != nil {
+			lastErr = err
+		} else {
+			lastErr = errors.New("err:mhttp.Fetch|do|empty response")
 		}
 
-		resp, lastErr = r.client.Do(req)
-		// 如果没有网络错误并且状态码小于 500 则认为成功（不再重试）
-		if lastErr == nil && resp != nil && resp.StatusCode < 500 {
-			break
-		}
-
-		// 如果收到响应且准备重试，记得关闭 body 以免泄露连接
-		if resp != nil && resp.Body != nil {
-			resp.Body.Close()
-			resp = nil
-		}
-
-		// 重试延迟
-		if i < maxRetries {
-			time.Sleep(time.Duration(r.config.RetryDelay) * time.Second)
+		// 如果还有重试机会，等待后重试
+		if attempt < retry {
+			time.Sleep(time.Duration(retryDelay) * time.Second)
+			continue
 		}
 	}
 
-	if lastErr != nil {
-		return nil, fmt.Errorf("请求执行失败: %w", lastErr)
-	}
-	if resp == nil {
-		return nil, errors.New("未获得有效的响应对象")
-	}
-
-	// 确保在退出前关闭响应体
-	defer resp.Body.Close()
-
-	// 读取响应体
-	respBody, readErr := io.ReadAll(resp.Body)
-	if readErr != nil {
-		return nil, fmt.Errorf("读取响应体失败: %w", readErr)
-	}
-
-	return &Response{
-		StatusCode: resp.StatusCode,
-		Header:     resp.Header,
-		Body:       respBody,
-	}, nil
+	return nil, lastErr
 }
