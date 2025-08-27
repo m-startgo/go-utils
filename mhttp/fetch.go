@@ -1,40 +1,16 @@
 package mhttp
 
-/*
-我想基于 github.com/gocolly/colly/v2 封装一个请求库
-
-
-可以像如下这样调用
-
-resData,err:= NewFetch({
-	URL: "http://www.test.com",
-	Data: []byte,
-	DataMap: map[string]any,
-	Params: map[string]string,
-	Headers: map[string]string,
-	Timeout: 10,
-	Retry: 3,
-	RetryDelay: 2,
-}).Get()
-
-传递了 Data 则会忽略 DataMap
-Params 则代表在 URL 后面拼接的参数
-
-上述的参数名字和 key 名 你都可以随意修改，我只是给你一个例子，
-要支持 Get 和 Post 两种请求方式
-
-*/
-
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
-
-	"github.com/gocolly/colly/v2"
 )
 
 // FetchOptions 请求选项
@@ -44,10 +20,12 @@ type FetchOptions struct {
 	DataMap    map[string]any
 	Params     map[string]string
 	Headers    map[string]string
-	Timeout    int // seconds
-	Retry      int
-	RetryDelay int // seconds
-	Method     string
+	Timeout    int    // seconds
+	Retry      int    // 重试次数
+	RetryDelay int    // 重试次数延迟 seconds
+	Method     string // 允许值：GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS（不区分大小写，会在 Do 中规范化为大写）
+	// MaxBodySize 限制读取响应体的最大字节数，0 表示不限制
+	MaxBodySize int64
 }
 
 // Fetch 请求封装
@@ -55,32 +33,40 @@ type Fetch struct {
 	opts FetchOptions
 }
 
+// package-level transport 用于复用连接池
+var defaultTransport = &http.Transport{}
+
 // NewFetch 创建一个 Fetch 实例
-// 示例:
-//
-//	f := NewFetch(FetchOptions{URL: "http://example.com", Timeout: 10}).Get()
 func NewFetch(opts FetchOptions) *Fetch {
 	return &Fetch{opts: opts}
 }
 
 // Get 发起 GET 请求，并返回响应 body
-func (f *Fetch) Get() ([]byte, error) {
-	f.opts.Method = http.MethodGet
-	return f.do()
-}
-
-// Post 发起 POST 请求，并返回响应 body
-func (f *Fetch) Post() ([]byte, error) {
-	f.opts.Method = http.MethodPost
-	return f.do()
+// Do 发起请求，使用 FetchOptions.Method，要求 Method 非空并且为标准 HTTP 方法
+// 调用示例：
+//
+//	res, err := NewFetch(FetchOptions{URL: "https://...", Method: http.MethodPost, DataMap: m}).Do()
+func (f *Fetch) Do() ([]byte, error) {
+	opts := f.opts
+	if opts.Method == "" {
+		return nil, errors.New("empty Method")
+	}
+	m := strings.ToUpper(opts.Method)
+	switch m {
+	case http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions:
+		// ok
+	default:
+		return nil, fmt.Errorf("invalid method: %s", opts.Method)
+	}
+	opts.Method = m
+	return f.do(opts)
 }
 
 // do 执行请求，并支持重试
-func (f *Fetch) do() ([]byte, error) {
-	opts := f.opts
-
+func (f *Fetch) do(opts FetchOptions) ([]byte, error) {
+	// 保护性检查
 	if opts.URL == "" {
-		return nil, errors.New("err:mhttp.Fetch|do|empty URL")
+		return nil, errors.New("empty URL")
 	}
 
 	// 构造 URL 和 params
@@ -96,7 +82,7 @@ func (f *Fetch) do() ([]byte, error) {
 		u.RawQuery = q.Encode()
 	}
 
-	// body 构造：保存原始字节切片，避免传递 typed-nil 到接口引起 panic
+	// body 构造
 	var rawBody []byte
 	if opts.Method != http.MethodGet {
 		if len(opts.Data) > 0 {
@@ -107,7 +93,7 @@ func (f *Fetch) do() ([]byte, error) {
 				return nil, jerr
 			}
 			rawBody = jb
-			// 如果用户未显式设置 Content-Type，则设置为 application/json
+			// 设置默认 Content-Type（修改本地 opts 副本，不影响调用方）
 			if opts.Headers == nil {
 				opts.Headers = map[string]string{"Content-Type": "application/json"}
 			} else {
@@ -134,49 +120,70 @@ func (f *Fetch) do() ([]byte, error) {
 		retryDelay = 1
 	}
 
+	client := &http.Client{Transport: defaultTransport, Timeout: time.Duration(tout) * time.Second}
+
 	var lastErr error
-	var respBody []byte
 
 	for attempt := 0; attempt <= retry; attempt++ {
-		// 每次都创建新的 collector，避免状态污染
-		c := colly.NewCollector()
-		c.SetRequestTimeout(time.Duration(tout) * time.Second)
+		// context with timeout for this attempt
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(tout)*time.Second)
+		defer cancel()
 
-		respBody = nil
-		c.OnResponse(func(r *colly.Response) {
-			// 保存最后一次响应
-			respBody = make([]byte, len(r.Body))
-			copy(respBody, r.Body)
-		})
-
-		// 转换 headers
-		hdr := http.Header{}
-		for k, v := range opts.Headers {
-			hdr.Set(k, v)
-		}
-
-		var body io.Reader
+		var bodyReader io.Reader
 		if rawBody != nil {
-			// 为每次请求创建新的 reader，接口为 io.Reader，避免 typed-nil
-			body = bytes.NewReader(rawBody)
+			bodyReader = bytes.NewReader(rawBody)
 		}
 
-		err = c.Request(opts.Method, u.String(), body, nil, hdr)
-		if err == nil && respBody != nil {
-			return respBody, nil
-		}
-
+		req, err := http.NewRequestWithContext(ctx, opts.Method, u.String(), bodyReader)
 		if err != nil {
-			lastErr = err
-		} else {
-			lastErr = errors.New("err:mhttp.Fetch|do|empty response")
+			return nil, fmt.Errorf("create request: %w", err)
 		}
 
-		// 如果还有重试机会，等待后重试
-		if attempt < retry {
-			time.Sleep(time.Duration(retryDelay) * time.Second)
-			continue
+		// headers
+		for k, v := range opts.Headers {
+			req.Header.Set(k, v)
 		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("request error: %w", err)
+			// 网络/超时类错误重试
+			if attempt < retry {
+				time.Sleep(time.Duration(retryDelay) * time.Second)
+				continue
+			}
+			return nil, lastErr
+		}
+
+		// ensure body closed
+		var respBody []byte
+		func() {
+			defer resp.Body.Close()
+			var reader io.Reader = resp.Body
+			if opts.MaxBodySize > 0 {
+				reader = io.LimitReader(resp.Body, opts.MaxBodySize)
+			}
+			b, rerr := io.ReadAll(reader)
+			if rerr != nil {
+				lastErr = fmt.Errorf("read body: %w", rerr)
+				return
+			}
+			respBody = b
+		}()
+
+		// 判断状态码
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			// 对 5xx 做重试，对 4xx 一般不重试
+			lastErr = fmt.Errorf("http status %d: %s", resp.StatusCode, string(respBody))
+			if resp.StatusCode >= 500 && attempt < retry {
+				time.Sleep(time.Duration(retryDelay) * time.Second)
+				continue
+			}
+			return nil, lastErr
+		}
+
+		// 成功
+		return respBody, nil
 	}
 
 	return nil, lastErr

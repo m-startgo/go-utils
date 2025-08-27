@@ -1,156 +1,142 @@
 package mhttp
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"sync"
+	"strings"
 	"testing"
-	"time"
 )
 
-func TestFetch_Get_ParamsAndHeaders(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			t.Fatalf("expected GET, got %s", r.Method)
-		}
-		if r.URL.Query().Get("q") != "1" {
-			t.Fatalf("expected query q=1, got %s", r.URL.Query().Get("q"))
-		}
-		if r.Header.Get("X-Test") != "ok" {
-			t.Fatalf("expected header X-Test=ok, got %s", r.Header.Get("X-Test"))
-		}
-		w.Write([]byte("hello"))
+func TestDo_Get_Success(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("hello-get"))
 	}))
-	defer ts.Close()
+	defer srv.Close()
 
-	opts := FetchOptions{
-		URL:     ts.URL,
-		Params:  map[string]string{"q": "1"},
-		Headers: map[string]string{"X-Test": "ok"},
-		Timeout: 5,
-	}
-
-	b, err := NewFetch(opts).Get()
+	res, err := NewFetch(FetchOptions{URL: srv.URL, Method: http.MethodGet, Timeout: 5}).Do()
 	if err != nil {
-		t.Fatalf("Get error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if !bytes.Equal(b, []byte("hello")) {
-		t.Fatalf("unexpected body: %s", string(b))
+	if string(res) != "hello-get" {
+		t.Fatalf("unexpected body: %s", string(res))
 	}
 }
 
-func TestFetch_Post_DataBytes(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Fatalf("expected POST, got %s", r.Method)
-		}
-		b, _ := io.ReadAll(r.Body)
-		if string(b) != "payload-bytes" {
-			t.Fatalf("unexpected body: %s", string(b))
-		}
-		w.Write([]byte("ok"))
+func TestDo_Post_JSON(t *testing.T) {
+	var gotContentType string
+	var gotBody []byte
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotContentType = r.Header.Get("Content-Type")
+		body, _ := io.ReadAll(r.Body)
+		gotBody = body
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(body)
 	}))
-	defer ts.Close()
+	defer srv.Close()
 
-	opts := FetchOptions{
-		URL:     ts.URL,
-		Data:    []byte("payload-bytes"),
-		Headers: map[string]string{"X-Test": "post"},
-		Timeout: 5,
-	}
-
-	b, err := NewFetch(opts).Post()
+	data := map[string]any{"k": "v", "n": 1}
+	res, err := NewFetch(FetchOptions{URL: srv.URL, Method: http.MethodPost, DataMap: data, Timeout: 5}).Do()
 	if err != nil {
-		t.Fatalf("Post error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if string(b) != "ok" {
-		t.Fatalf("unexpected resp: %s", string(b))
+	expect, _ := json.Marshal(data)
+	if string(res) != string(expect) {
+		t.Fatalf("unexpected response body: %s", string(res))
+	}
+	if !strings.Contains(gotContentType, "application/json") {
+		t.Fatalf("expected content-type application/json, got %q", gotContentType)
+	}
+	if string(gotBody) != string(expect) {
+		t.Fatalf("server got unexpected body: %s", string(gotBody))
 	}
 }
 
-func TestFetch_Post_DataMap_JSON(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Fatalf("expected POST, got %s", r.Method)
-		}
-		if r.Header.Get("Content-Type") != "application/json" {
-			t.Fatalf("expected Content-Type application/json, got %s", r.Header.Get("Content-Type"))
-		}
-		b, _ := io.ReadAll(r.Body)
-		var got map[string]any
-		if err := json.Unmarshal(b, &got); err != nil {
-			t.Fatalf("invalid json body: %v", err)
-		}
-		if got["a"] != "b" {
-			t.Fatalf("unexpected json content: %v", got)
-		}
-		w.Write([]byte("okjson"))
+func TestDo_Params_Append(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(r.URL.RawQuery))
 	}))
-	defer ts.Close()
+	defer srv.Close()
 
-	opts := FetchOptions{
-		URL:     ts.URL,
-		DataMap: map[string]any{"a": "b"},
-		Timeout: 5,
-	}
-
-	b, err := NewFetch(opts).Post()
+	res, err := NewFetch(FetchOptions{URL: srv.URL, Method: http.MethodGet, Params: map[string]string{"a": "1", "b": "x"}, Timeout: 5}).Do()
 	if err != nil {
-		t.Fatalf("Post(DataMap) error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if string(b) != "okjson" {
-		t.Fatalf("unexpected resp: %s", string(b))
+	qs := string(res)
+	if !strings.Contains(qs, "a=1") || !strings.Contains(qs, "b=x") {
+		t.Fatalf("unexpected query string: %s", qs)
 	}
 }
 
-func TestFetch_Retry_OnTimeout(t *testing.T) {
-	var mu sync.Mutex
+func TestDo_InvalidMethod_Error(t *testing.T) {
+	_, err := NewFetch(FetchOptions{URL: "http://example.com", Method: "BAD"}).Do()
+	if err == nil || !strings.Contains(err.Error(), "invalid method") {
+		t.Fatalf("expected invalid method error, got: %v", err)
+	}
+}
+
+func TestDo_EmptyURL_Error(t *testing.T) {
+	_, err := NewFetch(FetchOptions{Method: http.MethodGet}).Do()
+	if err == nil || !strings.Contains(err.Error(), "empty URL") {
+		t.Fatalf("expected empty URL error, got: %v", err)
+	}
+}
+
+func TestDo_StatusCodeNon2xx_Error(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("server-error"))
+	}))
+	defer srv.Close()
+
+	_, err := NewFetch(FetchOptions{URL: srv.URL, Method: http.MethodGet, Timeout: 5}).Do()
+	if err == nil || !strings.Contains(err.Error(), "http status 500") {
+		t.Fatalf("expected http status 500 error, got: %v", err)
+	}
+	if err != nil && !strings.Contains(err.Error(), "server-error") {
+		t.Fatalf("expected error to include response body, got: %v", err)
+	}
+}
+
+func TestDo_MaxBodySize_Truncate(t *testing.T) {
+	big := strings.Repeat("a", 1024)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(big))
+	}))
+	defer srv.Close()
+
+	res, err := NewFetch(FetchOptions{URL: srv.URL, Method: http.MethodGet, Timeout: 5, MaxBodySize: 10}).Do()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(res) != 10 {
+		t.Fatalf("expected truncated length 10, got %d", len(res))
+	}
+}
+
+func TestDo_Retry_On5xx(t *testing.T) {
 	count := 0
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock()
-		c := count
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		count++
-		mu.Unlock()
-		// 首次请求睡眠，导致超时；后续请求正常返回
-		if c == 0 {
-			time.Sleep(2 * time.Second)
-			// 如果超时发生，客户端会已经返回；但 handler 仍会 finish
+		if count <= 2 {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte("err"))
 			return
 		}
-		w.Write([]byte("retry-ok"))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
 	}))
-	defer ts.Close()
+	defer srv.Close()
 
-	opts := FetchOptions{
-		URL:        ts.URL,
-		Timeout:    1, // 1s 超时
-		Retry:      1,
-		RetryDelay: 1,
-	}
-
-	b, err := NewFetch(opts).Get()
+	res, err := NewFetch(FetchOptions{URL: srv.URL, Method: http.MethodGet, Timeout: 5, Retry: 2, RetryDelay: 0}).Do()
 	if err != nil {
-		t.Fatalf("expected success after retry, got error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if string(b) != "retry-ok" {
-		t.Fatalf("unexpected body after retry: %s", string(b))
+	if string(res) != "ok" {
+		t.Fatalf("expected ok after retries, got %s", string(res))
 	}
-}
-
-// go test -v -run Test_mo7
-func Test_mo7(t *testing.T) {
-	res, err := NewFetch(FetchOptions{
-		URL:     "https://v1.hitokoto.cn",
-		Timeout: 10,
-	}).Get()
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-
-	fmt.Println("res", string(res))
 }
