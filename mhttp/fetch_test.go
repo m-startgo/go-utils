@@ -3,6 +3,7 @@ package mhttp
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -138,4 +139,18 @@ func TestFetch_Retry_OnTimeout(t *testing.T) {
 	if string(b) != "retry-ok" {
 		t.Fatalf("unexpected body after retry: %s", string(b))
 	}
+}
+
+// go test -v -run Test_mo7
+func Test_mo7(t *testing.T) {
+	res, err := NewFetch(FetchOptions{
+		URL:     "https://v1.hitokoto.cn",
+		Timeout: 10,
+	}).Get()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Println("res", string(res))
 }
