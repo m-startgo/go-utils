@@ -16,7 +16,7 @@
 
 linux， darwin，windows，amd64，arm64
 
-## 自动化检查示例
+## 常用 CI 示例
 
 ```powershell
 # 运行所有单元测试
