@@ -113,3 +113,49 @@ func TestEmptyPathErrors(t *testing.T) {
 		t.Fatalf("expected error for empty path in ReadDir")
 	}
 }
+
+func TestReadDirOrderingAndHidden(t *testing.T) {
+	dir := t.TempDir()
+	// create files with varying names
+	os.WriteFile(filepath.Join(dir, "b.txt"), []byte("b"), 0o644)
+	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".z"), []byte("z"), 0o644)
+
+	nodes, err := ReadDir(dir, 0)
+	if err != nil {
+		t.Fatalf("ReadDir error: %v", err)
+	}
+	if len(nodes) != 3 {
+		t.Fatalf("expected 3 entries, got %d", len(nodes))
+	}
+	// Expect alphabetical order by name (including dotfiles where '.' < 'a')
+	if nodes[0].Name != ".z" || nodes[1].Name != "a.txt" || nodes[2].Name != "b.txt" {
+		t.Fatalf("unexpected order: %#v", nodes)
+	}
+}
+
+func TestWriteAppendErrors(t *testing.T) {
+	// 在所有平台上可靠失败的情况：尝试向已存在的目录路径写入内容
+	dir := t.TempDir()
+	targetDir := filepath.Join(dir, "targetdir")
+	if err := os.Mkdir(targetDir, 0o755); err != nil {
+		t.Fatalf("mkdir failed: %v", err)
+	}
+
+	// 尝试写入一个已经存在且为目录的路径，应返回错误
+	if err := Write(targetDir, "x"); err == nil {
+		t.Fatalf("expected error when writing to a path that is a directory")
+	}
+	if err := Append(targetDir, "x"); err == nil {
+		t.Fatalf("expected error when appending to a path that is a directory")
+	}
+}
+
+func TestDetectMimeEmpty(t *testing.T) {
+	if DetectMime(nil) != "" {
+		t.Fatalf("expected empty mime for nil content")
+	}
+	if ExtByContent(nil) != "" {
+		t.Fatalf("expected empty ext for nil content")
+	}
+}

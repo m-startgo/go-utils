@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
 // FileNode 表示目录中每一项的返回信息
@@ -48,6 +49,8 @@ func ReadDir(root string, level int) ([]FileNode, error) {
 		if err != nil {
 			return err
 		}
+		// 为了保证返回顺序可预测（便于测试与使用），按名称排序
+		sort.Slice(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
 		for _, e := range entries {
 			name := e.Name()
 			absPath := filepath.Join(current, name)

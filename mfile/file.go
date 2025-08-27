@@ -19,6 +19,8 @@ func WriteByte(filePath string, content []byte) error {
 	if filePath == "" {
 		return errors.New("file path empty")
 	}
+	// 标准化路径，避免出现类似 "a/../b" 导致的异常
+	filePath = filepath.Clean(filePath)
 	dir := filepath.Dir(filePath)
 	if dir != "" && dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -34,10 +36,11 @@ func Append(filePath string, content string) error {
 }
 
 // AppendByte 将字节追加到文件末尾，若文件不存在则创建
-func AppendByte(filePath string, content []byte) error {
+func AppendByte(filePath string, content []byte) (err error) {
 	if filePath == "" {
 		return errors.New("file path empty")
 	}
+	filePath = filepath.Clean(filePath)
 	dir := filepath.Dir(filePath)
 	if dir != "" && dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -48,9 +51,22 @@ func AppendByte(filePath string, content []byte) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	_, err = f.Write(content)
-	return err
+	// 确保 Close 的错误不会被忽略
+	defer func() {
+		cerr := f.Close()
+		if err == nil {
+			err = cerr
+		}
+	}()
+
+	n, werr := f.Write(content)
+	if werr != nil {
+		return werr
+	}
+	if n != len(content) {
+		return errors.New("write incomplete")
+	}
+	return nil
 }
 
 // Read 返回文件内容的字节以及错误
