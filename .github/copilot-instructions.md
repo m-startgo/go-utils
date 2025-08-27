@@ -43,3 +43,30 @@ go vet ./...
 - 遇到模糊或信息不足的情况，立即向用户提出具体澄清问题（列出缺失项和可选方案）。
 - 保持向后兼容，避免使用弃用特性；优先使用当下最新稳定库、语法与实践。
 - 生成代码时充分考虑当前文件的上下文（如已导入的库、现有函数等）。
+
+## 函数声明规范
+
+- 在 Go 语言项目开发中声明函数时，优先采用命名返回值形式
+- 若使用命名返回值，需在函数顶部为返回值显式赋空值或者默认值
+
+格式如下：
+
+```go
+
+func Example() (resData map[string]any, resErr error) {
+	resData = map[string]any{}
+	resErr = nil
+
+	jsonByte, err := ToByte(val)
+	if err != nil {
+		resErr = err
+		return
+	}
+
+
+  resData = `<Successful Result>`
+
+  return
+}
+
+```
