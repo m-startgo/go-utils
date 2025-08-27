@@ -4,6 +4,7 @@
     "mcycle",
     "mfile",
     "mhttp",
+    "Millis",
     "mjson",
     "mlog",
     "mmath",
