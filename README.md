@@ -21,10 +21,10 @@ go get -u github.com/m-startgo/go-utils@v0.1.2
 ## 使用示例
 
 ```go
-// 引入指定目录如 m_str
-import "github.com/m-startgo/go-utils/m_str"
+// 引入指定目录如 mstr
+import "github.com/m-startgo/go-utils/mstr"
 
-// 使用指定函数如 m_str.TplFormat
+// 使用指定函数如 mstr.TplFormat
 func main() {
 	tpl := `
 app.name = ${appName}
@@ -36,9 +36,9 @@ app.port = ${appPort}
 		"appIP":   "0.0.0.0",
 	}
 
-	s := m_str.TplFormat(tpl, data)
+	s := mstr.TplFormat(tpl, data)
 	fmt.Println("s", s)
 }
 ```
 
-其余模块及函数请查看各目录下的注释以及 `_test.go` 测试文件。
+其余模块及函数请查看各目录下的注释以及 `*_test.go` 测试文件。

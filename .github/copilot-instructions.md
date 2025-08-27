@@ -2,25 +2,12 @@
 
 下面的说明专注于让 AI 编码代理能快速在此仓库中开展工作：这是一个以 Go 为主的工具库（module: `github.com/m-startgo/go-utils`，Go 版本 1.25），按「mXxx」子包划分常用工具函数，每个子包都很小且通过单元测试做为使用示例。
 
-核对清单（我会遵循这些项）：
-
-- 理解仓库结构与模块路径（`go.mod`）
-- 优先读取 `README.md` 与各子包的 `_test.go` 用例作为用法参考
 - 使用 `go test ./...`、`go test ./pkg -run TestName -v` 做验证
-- 遵循本仓库的命名/导出约定与小型函数风格
-
-快速背景（大局观）
-
-- 本库是一个通用工具集合，按功能拆成多个包：`mcron`, `mcycle`, `mfile`, `mhttp`, `mjson`, `mlog`, `mmath`, `mpath`, `mstr`, `mtime`, `mverify`。
-- 每个包通常只有一个或少量源文件和对应的 `_test.go`，测试文件常被用作示例/用法说明（例如 `README.md` 中引用了 `m_str.TplFormat`）。
-- 依赖在 `go.mod` 中声明：`github.com/robfig/cron/v3`、`github.com/shopspring/decimal`、`github.com/araddon/dateparse`。
 
 项目约定和可发现的模式（重要，避免泛泛而谈）
 
-- 包名前缀：所有包目录以 `m` 开头（例如 `mfile`, `mstr`），内部函数导出遵循 Go 习惯（首字母大写导出）。
 - 测试即文档：查看对应包的 `_test.go` 文件是理解 API 和边界条件的首选方式（例如 `mfile/file_test.go`、`mmath/all_test.go`）。
 - 单文件小工具：很多功能实现集中在单个文件（如 `mcron/New.go`, `mtime/time.go`, `mpath/path.go`），代码风格偏实用、不依赖复杂框架。
-- 命名差异：部分源码文件名用首字母大写（如 `Join.go`, `ToStr.go`），这对 Go 构建无影响，但注意搜索时区分大小写。
 
 常用开发/验证命令（在 Windows PowerShell 中）：
 
@@ -46,18 +33,18 @@ go vet ./...
 
 快速查找方向（作为 AI 的第一步）
 
-- 先读 `go.mod` → `README.md` → 各包的 `_test.go`。
+- 先读 `go.mod` → `README.md` → 各包的 `*_test.go`。
 - 若要实现/修改功能，打开对应包目录（例如 `mstr` 或 `mfile`）并运行其测试用例作为回归基线。
 
 示例引用（在仓库中可直接查看）
 
-- `README.md`：展示了 `m_str.TplFormat` 的使用示例。
+- `README.md`：展示了 `mstr.TplFormat` 的使用示例。
 - `mcron/New.go`：cron 相关工具封装，依赖 `github.com/robfig/cron/v3`。
 - `mmath/decimal.go`：使用 `shopspring/decimal` 管理小数精度。
 
 变更与贡献小提示（用于自动补丁和 PR）
 
-- 修改公共 API：同时更新对应 `_test.go` 并确保 `go test ./...` 通过。
+- 修改公共 API：同时更新对应 `*_test.go` 并确保 `go test ./...` 通过。
 - 小的修复或新工具：尽量在单一包内完成，保持变更原子且有测试覆盖。
 
 反馈请求
@@ -82,3 +69,7 @@ go vet ./...
 14. **上下文感知**：生成代码时充分考虑当前文件的上下文（如已导入的库、现有函数等）。
 15. **性能考量**：必要时提供性能优化建议，如避免不必要的计算、合理使用缓存等。
 16. **安全实践**：提醒潜在的安全风险（如注入攻击、敏感信息暴露等）并提供防范建议。
+
+## 其他规则与建议
+
+指令优先级遵循：系统 > 开发者文件（本文件） > 用户。若本文件内规则冲突，按下列顺序决策：安全/合规性条款优先，其次为不破坏构建的自动检测流程，再依次为风格/表述偏好。
