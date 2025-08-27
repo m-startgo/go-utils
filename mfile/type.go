@@ -6,80 +6,53 @@ import (
 	"strings"
 )
 
+// ContentToExtName 根据给定的 content-type 返回不带点的扩展名（例如 "png"）。
+// 函数对输入做基本规范化（Trim + ToLower + 去掉参数），并使用内部映射作兜底。
 func ContentToExtName(lType string) string {
-	ext := ""
-	switch lType {
-
-	case "image/bmp":
-		ext = "bmp"
-
-	case "image/gif":
-		ext = "gif"
-
-	case "image/jpeg":
-		ext = "jpeg"
-
-	case "image/webp":
-		ext = "webp"
-
-	case "image/png":
-		ext = "png"
-
-	case "text/html":
-		ext = "html"
-
-	case "text/plain":
-		ext = "txt"
-
-	case "application/vnd.visio":
-		ext = "vsd"
-
-	case "application/vnd.ms-powerpoint":
-		ext = "pptx"
-
-	case "application/msword":
-		ext = "docx"
-
-	case "application/msexcel":
-		ext = "xlsx"
-
-	case "application/csv":
-		ext = "csv"
-
-	case "text/xml":
-		ext = "xml"
-
-	case "video/mp4":
-		ext = "mp4"
-
-	case "video/x-msvideo":
-		ext = "avi"
-
-	case "video/quicktime":
-		ext = "mov"
-
-	case "video/mpeg":
-		ext = "mpeg"
-
-	case "video/x-ms-wmv":
-		ext = "wm"
-
-	case "video/x-flv":
-		ext = "flv"
-
-	case "video/x-matroska":
-		ext = "mkv"
-
+	ct := strings.TrimSpace(strings.ToLower(lType))
+	if ct == "" {
+		return ""
+	}
+	if idx := strings.Index(ct, ";"); idx != -1 {
+		ct = strings.TrimSpace(ct[:idx])
 	}
 
-	if strings.Contains(lType, "text/html") {
-		ext = "html"
+	// 直接使用 map，比长 switch 更易维护
+	m := map[string]string{
+		"image/bmp":             "bmp",
+		"image/gif":             "gif",
+		"image/jpeg":            "jpg", // 优先返回最常见的 "jpg"
+		"image/webp":            "webp",
+		"image/png":             "png",
+		"text/html":             "html",
+		"text/plain":            "txt",
+		"application/vnd.visio": "vsd",
+		// 一些历史/常见 Office MIME
+		"application/vnd.ms-powerpoint":                                             "ppt",
+		"application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+		"application/msword":                                                        "doc",
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document":   "docx",
+		"application/vnd.ms-excel":                                                  "xls",
+		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         "xlsx",
+		"application/csv":  "csv",
+		"text/xml":         "xml",
+		"video/mp4":        "mp4",
+		"video/x-msvideo":  "avi",
+		"video/quicktime":  "mov",
+		"video/mpeg":       "mpeg",
+		"video/x-ms-wmv":   "wm",
+		"video/x-flv":      "flv",
+		"video/x-matroska": "mkv",
 	}
 
-	return ext
+	if v, ok := m[ct]; ok {
+		return v
+	}
+	return ""
 }
 
 // MimeToExt 返回不带点的扩展名（例如 "png"），若未知返回空字符串。
+// 优先使用标准库 mime.ExtensionsByType 获取扩展名，失败后回退到 ContentToExtName 的映射。
 func MimeToExt(ct string) string {
 	ct = strings.TrimSpace(strings.ToLower(ct))
 	if ct == "" {
@@ -89,26 +62,10 @@ func MimeToExt(ct string) string {
 		ct = strings.TrimSpace(ct[:idx])
 	}
 	if exts, _ := mime.ExtensionsByType(ct); len(exts) > 0 {
-		// exts 如 [".png"], 去掉点
 		return strings.TrimPrefix(exts[0], ".")
 	}
-	// 兜底映射（只列出常见的）
-	m := map[string]string{
-		"image/jpeg":               "jpg",
-		"image/png":                "png",
-		"image/gif":                "gif",
-		"text/plain":               "txt",
-		"text/html":                "html",
-		"application/pdf":          "pdf",
-		"application/vnd.ms-excel": "xls",
-		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
-		"application/msword": "doc",
-		// ... 根据需要补充
-	}
-	if v, ok := m[ct]; ok {
-		return v
-	}
-	return ""
+	// 回退到内部映射
+	return ContentToExtName(ct)
 }
 
 // DetectMime 根据字节内容返回 MIME 类型，使用 http.DetectContentType
