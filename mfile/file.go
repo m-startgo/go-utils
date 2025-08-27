@@ -2,11 +2,8 @@ package mfile
 
 import (
 	"errors"
-	"mime"
-	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // Write 将字符串内容写入文件，若目录不存在则创建，若文件存在则覆盖
@@ -75,49 +72,4 @@ func Read(filePath string) ([]byte, error) {
 		return nil, errors.New("file path empty")
 	}
 	return os.ReadFile(filePath)
-}
-
-// DetectMime 根据字节内容返回 MIME 类型，使用 http.DetectContentType
-func DetectMime(content []byte) string {
-	if len(content) == 0 {
-		return ""
-	}
-	// DetectContentType 只需要前512字节
-	n := 512
-	if len(content) < 512 {
-		n = len(content)
-	}
-	return http.DetectContentType(content[:n])
-}
-
-// ExtByContent 根据内容推断合适的文件后缀（含点），若无法推断则返回空字符串
-func ExtByContent(content []byte) string {
-	mt := DetectMime(content)
-	if mt == "" {
-		return ""
-	}
-	// 去掉可能的 charset
-	if idx := strings.Index(mt, ";"); idx != -1 {
-		mt = strings.TrimSpace(mt[:idx])
-	}
-	exts, _ := mime.ExtensionsByType(mt)
-	if len(exts) > 0 {
-		return exts[0]
-	}
-	// 兜底：根据少数已知 mime 做映射
-	switch mt {
-	case "image/jpeg":
-		return ".jpg"
-	case "image/png":
-		return ".png"
-	case "image/gif":
-		return ".gif"
-	case "application/pdf":
-		return ".pdf"
-	case "text/plain":
-		return ".txt"
-	case "text/html":
-		return ".html"
-	}
-	return ""
 }

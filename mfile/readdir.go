@@ -19,6 +19,9 @@ type FileNode struct {
 	IsDir      bool   `json:"is_dir"`   // 是否为目录
 }
 
+// DirEntryInfo 是 FileNode 的别名，提供更语义化的类型名以便迁移使用
+type DirEntryInfo = FileNode
+
 // ReadDir 列出目录下的文件和目录。level 表示递归深度：
 //
 //	 0 => 只列出当前目录（不递归）
@@ -26,7 +29,7 @@ type FileNode struct {
 //	-1 => 递归所有层级
 //
 // 返回每项的 FileNode 列表
-func ReadDir(root string, level int) ([]FileNode, error) {
+func ListDir(root string, level int) ([]FileNode, error) {
 	if root == "" {
 		return nil, errors.New("root path empty")
 	}
