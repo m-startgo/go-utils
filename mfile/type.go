@@ -61,8 +61,36 @@ func MimeToExt(ct string) string {
 	if idx := strings.Index(ct, ";"); idx != -1 {
 		ct = strings.TrimSpace(ct[:idx])
 	}
+	// 优先映射，覆盖系统 mime 表可能的奇怪映射，保证跨平台一致性
+	preferred := map[string]string{
+		"image/jpeg":         "jpg",
+		"image/png":          "png",
+		"image/gif":          "gif",
+		"text/plain":         "txt",
+		"text/html":          "html",
+		"application/pdf":    "pdf",
+		"application/msword": "doc",
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+		"application/vnd.ms-excel": "xls",
+		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         "xlsx",
+		"application/vnd.ms-powerpoint":                                             "ppt",
+		"application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+	}
+	if v, ok := preferred[ct]; ok {
+		return v
+	}
 	if exts, _ := mime.ExtensionsByType(ct); len(exts) > 0 {
-		return strings.TrimPrefix(exts[0], ".")
+		ext := strings.TrimPrefix(exts[0], ".")
+		ext = strings.ToLower(ext)
+		// 规范常见别名（例如某些系统会将 image/jpeg 映射为 .jfif）
+		switch ext {
+		case "jfif", "jpeg":
+			return "jpg"
+		case "htm":
+			return "html"
+		default:
+			return ext
+		}
 	}
 	// 回退到内部映射
 	return ContentToExtName(ct)
