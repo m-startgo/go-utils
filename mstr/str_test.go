@@ -10,6 +10,14 @@ func Test_Join(t *testing.T) {
 	a := []int32{1, 2, 3, 4, 5}
 	joinStr := Join("mo7", "欢迎你", a, "张三")
 	t.Log("joinStr", joinStr)
+
+	str1 := Rand(8)
+	str2 := Rand(8)
+
+	if str1 == str2 {
+		t.Error("Rand 生成的随机字符串不应该相同")
+	}
+	t.Log("Rand", str1, str2)
 }
 
 // go test -v -run Test_ToStr

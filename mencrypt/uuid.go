@@ -22,11 +22,9 @@ func UUID() string {
 
 // 生成一个可读的 Time ID，基于当前时间戳和随机数。
 func TimeID() string {
-	// 格式：YYYYMMDDhhmmss.mmm-xxxxxxxx
-	// 例如：20250828T150405.123-1a2b3c4d （返回中不包含字母 T，这里使用紧凑数字格式）
-	t := time.Now().Format("2006-01-02-15-04-05-.000")
+	t := time.Now().Format("20060102-150405.000")
 	// 去掉.
-	t = strings.ReplaceAll(t, ".", "")
+	t = strings.ReplaceAll(t, ".", "-")
 
 	return t + "-" + mstr.Rand(8)
 }
