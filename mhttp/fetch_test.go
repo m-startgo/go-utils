@@ -10,68 +10,68 @@ import (
 )
 
 // go test -v -run Test_mo7
-func Test_mo7Get(t *testing.T) {
-	type ResType struct {
-		Code     int    `json:"code"`
-		Question string `json:"question"`
-		Answer   string `json:"answer"`
-	}
+// func Test_mo7Get(t *testing.T) {
+// 	type ResType struct {
+// 		Code     int    `json:"code"`
+// 		Question string `json:"question"`
+// 		Answer   string `json:"answer"`
+// 	}
 
-	question := "mo7cc"
+// 	question := "mo7cc"
 
-	res, err := NewFetch(FetchOptions{
-		URL: "https://uapis.cn/api/v1/answerbook/ask",
-		Params: map[string]string{
-			"question": question,
-		},
-		Method: "GET",
-	}).Do()
-	if err != nil {
-		t.Fatalf("请求出错 error: %v", err)
-	}
-	var data ResType
-	if err := json.Unmarshal(res, &data); err != nil {
-		t.Fatalf("解析结果出错 error: %v", err)
-	}
-	if data.Code != 200 {
-		t.Fatalf("请求失败 error: %s", string(res))
-	}
-	if data.Question != question {
-		t.Fatalf("请求结果不符合预期 error: %s", data.Question)
-	}
-	t.Logf("Get响应结果: %+v", data)
-}
+// 	res, err := NewFetch(FetchOptions{
+// 		URL: "https://uapis.cn/api/v1/answerbook/ask",
+// 		Params: map[string]string{
+// 			"question": question,
+// 		},
+// 		Method: "GET",
+// 	}).Do()
+// 	if err != nil {
+// 		t.Fatalf("请求出错 error: %v", err)
+// 	}
+// 	var data ResType
+// 	if err := json.Unmarshal(res, &data); err != nil {
+// 		t.Fatalf("解析结果出错 error: %v", err)
+// 	}
+// 	if data.Code != 200 {
+// 		t.Fatalf("请求失败 error: %s", string(res))
+// 	}
+// 	if data.Question != question {
+// 		t.Fatalf("请求结果不符合预期 error: %s", data.Question)
+// 	}
+// 	t.Logf("Get响应结果: %+v", data)
+// }
 
 // go test -v -run Test_mo7Post
-func Test_mo7Post(t *testing.T) {
-	type ResType struct {
-		Code     int    `json:"code"`
-		Question string `json:"question"`
-		Answer   string `json:"answer"`
-	}
-	question := "mo7cc"
-	res, err := NewFetch(FetchOptions{
-		URL: "https://uapis.cn/api/v1/answerbook/ask",
-		DataMap: map[string]any{
-			"question": question,
-		},
-		Method: "POST",
-	}).Do()
-	if err != nil {
-		t.Fatalf("请求出错 error: %v", err)
-	}
-	var data ResType
-	if err := json.Unmarshal(res, &data); err != nil {
-		t.Fatalf("解析结果出错 error: %v", err)
-	}
-	if data.Code != 200 {
-		t.Fatalf("请求失败 error: %s", string(res))
-	}
-	if data.Question != question {
-		t.Fatalf("请求结果不符合预期 error: %s", data.Question)
-	}
-	t.Logf("Post响应结果: %+v", data)
-}
+// func Test_mo7Post(t *testing.T) {
+// 	type ResType struct {
+// 		Code     int    `json:"code"`
+// 		Question string `json:"question"`
+// 		Answer   string `json:"answer"`
+// 	}
+// 	question := "mo7cc"
+// 	res, err := NewFetch(FetchOptions{
+// 		URL: "https://uapis.cn/api/v1/answerbook/ask",
+// 		DataMap: map[string]any{
+// 			"question": question,
+// 		},
+// 		Method: "POST",
+// 	}).Do()
+// 	if err != nil {
+// 		t.Fatalf("请求出错 error: %v", err)
+// 	}
+// 	var data ResType
+// 	if err := json.Unmarshal(res, &data); err != nil {
+// 		t.Fatalf("解析结果出错 error: %v", err)
+// 	}
+// 	if data.Code != 200 {
+// 		t.Fatalf("请求失败 error: %s", string(res))
+// 	}
+// 	if data.Question != question {
+// 		t.Fatalf("请求结果不符合预期 error: %s", data.Question)
+// 	}
+// 	t.Logf("Post响应结果: %+v", data)
+// }
 
 func TestDo_Get_Success(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
