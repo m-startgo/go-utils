@@ -83,12 +83,33 @@ func formatLine(level string, v ...any) string {
 
 // logToFile 将格式化后的行追加到对应类型的日志文件中。
 func (l *Logger) logToFile(typ string, line string) error {
+	// guard against nil receiver
+	if l == nil {
+		return fmt.Errorf("err:mlog.logToFile|nil logger")
+	}
+
 	if typ == "" {
 		typ = "info"
 	}
+
+	// protect against empty Path/Name
+	path := strings.TrimSpace(l.Path)
+	if path == "" {
+		path = "./logs"
+	}
+	name := strings.TrimSpace(l.Name)
+	if name == "" {
+		name = "log"
+	}
+
+	// ensure directory exists
+	if !mpath.IsExist(path) {
+		_ = os.MkdirAll(path, 0o755)
+	}
+
 	date := mtime.FromTime(time.Now()).Format("YYYY-MM-DD")
-	filename := fmt.Sprintf("%s-%s-%s.log", l.Name, typ, date)
-	fp := filepath.Join(l.Path, filename)
+	filename := fmt.Sprintf("%s-%s-%s.log", name, typ, date)
+	fp := filepath.Join(path, filename)
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return mfile.Append(fp, line)

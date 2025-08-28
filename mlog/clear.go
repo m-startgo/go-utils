@@ -15,6 +15,7 @@ myLog.Clear(ClearOpt{
 */
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -26,6 +27,11 @@ import (
 // - Type: 指定要删除的类型（info,warn,error,debug），为空则删除全部类型
 // - Before: 距离现在的天数，默认 90 天，删除早于该天数的日志文件
 func (l *Logger) Clear(opt ClearOpt) {
+	// guard against nil receiver
+	if l == nil {
+		return
+	}
+
 	beforeDays := opt.Before
 	if beforeDays <= 0 {
 		beforeDays = 90
@@ -51,7 +57,7 @@ func (l *Logger) Clear(opt ClearOpt) {
 
 	fileList, err := mfile.ListDir(l.Path, 0)
 	if err != nil {
-		l.Error("err:mlog.Clear|mfile.ListDir", l, opt)
+		_ = l.Error(fmt.Sprintf("err:mlog.Clear|mfile.ListDir|%v", err))
 		return
 	}
 
@@ -79,7 +85,7 @@ func (l *Logger) Clear(opt ClearOpt) {
 		// 判断日期是否早于 cutoff
 		fileDate, err := mtime.Parse(fileDateStr)
 		if err != nil {
-			l.Error("err:mlog.Clear|mtime.Parse", l, opt)
+			_ = l.Error(fmt.Sprintf("err:mlog.Clear|mtime.Parse|%v", err))
 			continue
 		}
 		timeDiff := fileDate.UnixMilli() - cutoff.UnixMilli()
@@ -91,10 +97,10 @@ func (l *Logger) Clear(opt ClearOpt) {
 		if v.IsFile {
 			err = os.Remove(v.AbsPath)
 			if err != nil {
-				l.Error("err:mlog.Clear|删除日志文件失败", l, opt)
+				_ = l.Error(fmt.Sprintf("err:mlog.Clear|remove|%v|%s", err, v.AbsPath))
 				continue
 			}
-			l.Info("err:mlog.Clear|日志文件已删除", v.AbsPath)
+			_ = l.Info(fmt.Sprintf("info:mlog.Clear|removed|%s", v.AbsPath))
 		}
 	}
 }
