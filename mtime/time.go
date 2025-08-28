@@ -307,6 +307,7 @@ func tokenToLayout(token string) string {
 		{"MM", "01"},
 		{"DD", "02"},
 		{"HH", "15"},
+		{"hh", "15"},
 		{"mm", "04"},
 		{"ss", "05"},
 		{"SSSSSS", "000000"},
