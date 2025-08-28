@@ -1,44 +1,15 @@
 package mlog
 
 /*
-我想给予标准库封装一个更简洁的日志接口，方便在项目中使用和替换不同的日志实现。
 
-日志文件以 名称-类型-YYYY-MM-DD.log 格式命名，方便按类型和日期查找。
-由用户决定日志类型和名称，以及存放目录，如果目录不存在则自动创建。
-
-涉及到时间，路径和文件的处理，使用本地的 mtime 和  mpath 以及 mfile 库
-
-然后 log 可以定义删除
-
-调用方式如下
-
-var myLog = mlog.New({
-  Path: "./logs", // 为空 则 默认为 ./logs
-	Name: "log", // 为空 则 默认为 log
+myLog := mlog.New(mlog.Config{
+	Path: "./logs",
+	Name: "log",
 })
-
-myLog.Info("This is an info message")
-myLog.Warn("This is a warning message")
-myLog.Error("This is an error message")
-myLog.Debug("This is a debug message")
-
-
-// 可以定义多个删除方法
-myLog.Clear({
-	Type: []string{
-		"warn","debug"
-	}, // 为空则 默认删除全部类型
-	Before: 7 , // 距离现在的时长 天数，为空 则 默认90天
-})
-myLog.Clear({
-	Type: []string{
-		"info","warn"
-	}, // 为空则 默认删除全部类型
-	Before: 30 , // 距离现在的时长 天数，为空 则 默认90天
-})
-
-// 因为日志格式是固定的，所以可以通过名称和类型来删除指定的日志文件
-// Type 意思是要清除的日志类型，只能为 "info","warn","error","debug" 这四种
+myLog.Info("this is info")
+myLog.Warn("this is warn")
+myLog.Error("this is error")
+myLog.Debug("this is debug")
 
 */
 
@@ -141,81 +112,4 @@ func (l *Logger) Error(v ...any) error {
 // Debug 写一条 debug 级别的日志。
 func (l *Logger) Debug(v ...any) error {
 	return l.logToFile("debug", formatLine("debug", v...))
-}
-
-// Clear 按配置删除匹配的历史日志文件。
-// - Type: 指定要删除的类型（info,warn,error,debug），为空则删除全部类型
-// - Before: 距离现在的天数，默认 90 天，删除早于该天数的日志文件
-func (l *Logger) Clear(opt ClearOpt) {
-	beforeDays := opt.Before
-	if beforeDays <= 0 {
-		beforeDays = 90
-	}
-	// 计算截止日期（保留到 beforeDays 天之前的之后文件）
-	// cutoff := time.Now().Add(-time.Duration(beforeDays) * 24 * time.Hour)
-	cutoff := mtime.Now().AddDays(-beforeDays)
-
-	// 准备要匹配的类型集合
-	typesToMatch := map[string]struct{}{}
-	if len(opt.Type) == 0 {
-		for k := range validTypes {
-			typesToMatch[k] = struct{}{}
-		}
-	} else {
-		for _, t := range opt.Type {
-			tt := strings.ToLower(strings.TrimSpace(t))
-			if _, ok := validTypes[tt]; ok {
-				typesToMatch[tt] = struct{}{}
-			}
-		}
-	}
-
-	fileList, err := mfile.ListDir(l.Path, 0)
-	if err != nil {
-		l.Error("err:mlog.Clear|mfile.ListDir", l, opt)
-		return
-	}
-
-	for _, v := range fileList {
-		fileName := v.Name
-		// 名称格式：名称-类型-YYYY-MM-DD.log
-		// 判断是否包含  l.Name
-		if !strings.HasPrefix(fileName, l.Name+"-") || !strings.HasSuffix(fileName, ".log") {
-			continue
-		}
-
-		// 去掉前缀和后缀，得到 中间部分
-		mid := strings.TrimSuffix(strings.TrimPrefix(fileName, l.Name+"-"), ".log")
-		// 是否包含 typesToMatch 中的类型
-		parts := strings.SplitN(mid, "-", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		fileType := parts[0]
-		fileDateStr := parts[1]
-		if _, ok := typesToMatch[fileType]; !ok {
-			continue
-		}
-
-		// 判断日期是否早于 cutoff
-		fileDate, err := mtime.Parse(fileDateStr)
-		if err != nil {
-			l.Error("err:mlog.Clear|mtime.Parse", l, opt)
-			continue
-		}
-		timeDiff := fileDate.UnixMilli() - cutoff.UnixMilli()
-		// 当前file 小于 cutoff 则跳过
-		if timeDiff >= 0 {
-			continue
-		}
-
-		if v.IsFile {
-			err = os.Remove(v.AbsPath)
-			if err != nil {
-				l.Error("err:mlog.Clear|删除日志文件失败", l, opt)
-				continue
-			}
-			l.Info("err:mlog.Clear|日志文件已删除", v.AbsPath)
-		}
-	}
 }
