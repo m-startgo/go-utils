@@ -63,6 +63,25 @@ func ToMap(val any) (resData map[string]any, resErr error) {
 	return
 }
 
+// 将任意 JSON-able 数据转换为 map[string]string。
+func ToMapStr(val any) (resData map[string]string, resErr error) {
+	resData = map[string]string{}
+	resErr = nil
+
+	jsonByte, err := ToByte(val)
+	if err != nil {
+		resErr = err
+		return
+	}
+
+	err2 := json.Unmarshal(jsonByte, &resData)
+	if err2 != nil {
+		resErr = err2
+		return
+	}
+	return
+}
+
 // 打印任意 JSON-able 数据的缩进格式的 JSON 字符串，并返回该字符串。
 func PrintAny(data any) string {
 	s := IndentJson(data)
