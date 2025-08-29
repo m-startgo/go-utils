@@ -193,3 +193,47 @@ func TestParseToStd(t *testing.T) {
 		t.Fatalf("expected nil for invalid input")
 	}
 }
+
+// TestFromStdPtr 验证 FromStdPtr 的行为：
+// - nil 输入返回零值 MTime
+// - 非 nil 返回与原始 time.Time 等价的封装
+func TestFromStdPtr(t *testing.T) {
+	var nilPtr *time.Time
+	mt := FromStdPtr(nilPtr)
+	if !mt.ToTime().IsZero() {
+		t.Fatalf("FromStdPtr(nil) expected zero time, got %v", mt.ToTime())
+	}
+
+	std := time.Date(2021, 1, 2, 3, 4, 5, 0, time.UTC)
+	p := &std
+	mt2 := FromStdPtr(p)
+	if !mt2.ToTime().Equal(std) {
+		t.Fatalf("FromStdPtr returned different time: %v vs %v", mt2.ToTime(), std)
+	}
+}
+
+// TestAge 覆盖 Age 的若干边界场景：无效输入、未来日期、整年与半年内
+func TestAge(t *testing.T) {
+	// 无效输入应返回 0
+	if Age("not-a-date") != 0 {
+		t.Fatalf("expected 0 for invalid birthday")
+	}
+
+	// 未来日期应返回 0
+	future := time.Now().UTC().Add(24 * time.Hour).Format("2006-01-02 15:04:05")
+	if Age(future) != 0 {
+		t.Fatalf("expected 0 for future birthday, got %d", Age(future))
+	}
+
+	// 刚好 1 年前应返回 1
+	oneYear := time.Now().UTC().AddDate(-1, 0, 0).Format("2006-01-02 15:04:05")
+	if Age(oneYear) != 1 {
+		t.Fatalf("expected 1 for one year ago, got %d", Age(oneYear))
+	}
+
+	// 半年前应返回 0（小于一年）
+	halfYear := time.Now().UTC().AddDate(0, -6, 0).Format("2006-01-02 15:04:05")
+	if Age(halfYear) != 0 {
+		t.Fatalf("expected 0 for half year ago, got %d", Age(halfYear))
+	}
+}

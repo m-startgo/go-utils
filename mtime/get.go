@@ -18,6 +18,19 @@ func NowDefaultString() string {
 	return Now().FormatDefault()
 }
 
+// FromStdPtr 将标准库的 *time.Time 转换为本包的 MTime。
+// - 如果传入为 nil，返回零值 MTime（即封装的 time.Time 为零值）。
+// 示例：
+//
+//	mt := mtime.FromStdPtr(&time.Now())
+//	if mt.IsZero() { ... }
+func FromStdPtr(tt *time.Time) MTime {
+	if tt == nil {
+		return MTime{}
+	}
+	return MTime{t: *tt}
+}
+
 // FormatDefault 返回默认的无参数格式化，格式为 "YYYY-MM-DDTHH:mm:ss"
 // 例如: 2020-01-02T15:04:05
 func (t MTime) FormatDefault() string {

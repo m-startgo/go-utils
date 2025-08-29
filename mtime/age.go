@@ -9,7 +9,7 @@ func Age(birthDay string) int {
 	}
 	startUnix := birthDayTime.UnixMilli()
 
-	nowUnix := Now().UnixMilli()
+	nowUnix := NowUnixMilli()
 
 	if nowUnix-startUnix < 0 {
 		return 0
