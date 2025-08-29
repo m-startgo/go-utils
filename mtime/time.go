@@ -17,8 +17,8 @@ import (
 // 默认的 token 风格格式
 const DefaultToken = "YYYY-MM-DD HH:mm:ss.SSSSSS ±HH:MM"
 
-// Time 是对 time.Time 的轻量封装，便于链式调用
-type Time struct {
+// MTime 是对 time.Time 的轻量封装，便于链式调用（原名 Time，已重命名以避免与标准库名冲突）。
+type MTime struct {
 	t time.Time
 }
 
@@ -64,40 +64,40 @@ func SetDefaultLocation(loc *time.Location) {
 // - 如果字符串为纯数字（可带小数点、可有正负号），优先按时间戳解析（自动识别秒/毫秒/微秒/纳秒/带小数秒）
 // - 否则使用第三方解析器尝试解析任意常见时间格式
 // 返回解析后的 Time 或解析错误。
-func ParseString(s string) (Time, error) {
+func ParseString(s string) (MTime, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return Time{}, fmt.Errorf("empty time string")
+		return MTime{}, fmt.Errorf("empty time string")
 	}
 	if isNumericString(s) {
 		if i, err := strconv.ParseInt(s, 10, 64); err == nil {
-			return Time{t: unixFromInt64(i)}, nil
+			return MTime{t: unixFromInt64(i)}, nil
 		}
 		if f, err := strconv.ParseFloat(s, 64); err == nil {
-			return Time{t: timeFromFloatSeconds(f)}, nil
+			return MTime{t: timeFromFloatSeconds(f)}, nil
 		}
 	}
 	tt, err := dateparse.ParseAny(s)
 	if err != nil {
-		return Time{}, err
+		return MTime{}, err
 	}
-	return Time{t: tt}, nil
+	return MTime{t: tt}, nil
 }
 
 // ParseInt64 按整数时间戳解析并返回 Time。函数会根据数字位数自动判断单位（秒/毫秒/微秒/纳秒）。
 // 示例：ParseInt64(1609459200000) // 13 位毫秒
-func ParseInt64(n int64) (Time, error) { return Time{t: unixFromInt64(n)}, nil }
+func ParseInt64(n int64) (MTime, error) { return MTime{t: unixFromInt64(n)}, nil }
 
 // ParseFloat64 按带小数的秒数解析为 Time（小数部分表示秒的小数部分）。
 // 示例：ParseFloat64(1609459200.123) 表示秒 + 小数秒
-func ParseFloat64(f float64) (Time, error) { return Time{t: timeFromFloatSeconds(f)}, nil }
+func ParseFloat64(f float64) (MTime, error) { return MTime{t: timeFromFloatSeconds(f)}, nil }
 
 // Parse 尝试从任意支持的类型解析为 Time：
 // 支持 string、整型、无符号整型、浮点型等。对于不能直接识别的类型，会使用 fmt.Sprintf 作为后备并尝试按数字或字符串解析。
 // 返回解析结果或错误。
-func Parse(v any) (Time, error) {
+func Parse(v any) (MTime, error) {
 	if v == nil {
-		return Time{}, fmt.Errorf("nil value")
+		return MTime{}, fmt.Errorf("nil value")
 	}
 	switch x := v.(type) {
 	case string:
@@ -124,7 +124,7 @@ func Parse(v any) (Time, error) {
 		if x <= math.MaxInt64 {
 			return ParseInt64(int64(x))
 		}
-		return Time{}, fmt.Errorf("uint64 value too large")
+		return MTime{}, fmt.Errorf("uint64 value too large")
 	case float32:
 		return ParseFloat64(float64(x))
 	case float64:
@@ -139,13 +139,13 @@ func Parse(v any) (Time, error) {
 				return ParseFloat64(f)
 			}
 		}
-		return Time{}, fmt.Errorf("unsupported parse type: %T", v)
+		return MTime{}, fmt.Errorf("unsupported parse type: %T", v)
 	}
 }
 
 // MustParse 是 Parse 的便捷包装：解析失败时返回零值 Time（不再 panic）。
 // 建议在需要明确错误处理的场景使用 Parse，并避免依赖 MustParse 隐式吞错。
-func MustParse(v any) Time {
+func MustParse(v any) MTime {
 	t, _ := Parse(v)
 	return t
 }
@@ -228,16 +228,16 @@ func timeFromFloatSeconds(f float64) time.Time {
 	return tt.In(loc)
 }
 
-// FromTime 包装一个标准 time.Time 为本包的 Time 类型，方便链式调用。
-func FromTime(tt time.Time) Time { return Time{t: tt} }
+// FromTime 包装一个标准 time.Time 为本包的 MTime 类型，方便链式调用。
+func FromTime(tt time.Time) MTime { return MTime{t: tt} }
 
 // ToTime 返回底层的标准 time.Time。
-func (t Time) ToTime() time.Time { return t.t }
+func (t MTime) ToTime() time.Time { return t.t }
 
 // Format 使用自定义 token 或默认 token 将 Time 格式化为字符串：
 // - 传入空字符串或 DefaultToken 使用默认格式
 // - 传入类似 "YYYY-MM-DD HH:mm:ss" 的 token，将被映射为 Go 的 layout 进行格式化
-func (t Time) Format(token string) string {
+func (t MTime) Format(token string) string {
 	if token == "" {
 		token = DefaultToken
 	}
@@ -246,53 +246,55 @@ func (t Time) Format(token string) string {
 }
 
 // String 实现 fmt.Stringer，等价于使用默认 token 的 Format。
-func (t Time) String() string { return t.Format(DefaultToken) }
+func (t MTime) String() string { return t.Format(DefaultToken) }
 
 // Add 返回在当前 Time 上加上指定的 duration 后的新 Time（不修改原值）。
-func (t Time) Add(d time.Duration) Time { return Time{t: t.t.Add(d)} }
+func (t MTime) Add(d time.Duration) MTime { return MTime{t: t.t.Add(d)} }
 
 // AddDays 在当前 Time 上增加指定天数（整天）。
-func (t Time) AddDays(days int) Time { return Time{t: t.t.Add(time.Duration(days) * 24 * time.Hour)} }
+func (t MTime) AddDays(days int) MTime {
+	return MTime{t: t.t.Add(time.Duration(days) * 24 * time.Hour)}
+}
 
 // AddHours 在当前 Time 上增加指定小时数（整小时）。
-func (t Time) AddHours(h int) Time { return Time{t: t.t.Add(time.Duration(h) * time.Hour)} }
+func (t MTime) AddHours(h int) MTime { return MTime{t: t.t.Add(time.Duration(h) * time.Hour)} }
 
 // StartOfDay 返回当前时间对应日期的 00:00:00（同一时区）。
-func (t Time) StartOfDay() Time {
+func (t MTime) StartOfDay() MTime {
 	y, m, d := t.t.Date()
 	loc := t.t.Location()
-	return Time{t: time.Date(y, m, d, 0, 0, 0, 0, loc)}
+	return MTime{t: time.Date(y, m, d, 0, 0, 0, 0, loc)}
 }
 
 // EndOfDay 返回当前时间对应日期的末时刻（23:59:59.999999），精度到微秒，保留原时区。
-func (t Time) EndOfDay() Time {
+func (t MTime) EndOfDay() MTime {
 	y, m, d := t.t.Date()
 	loc := t.t.Location()
 	const endOfDayNsec = 999999 * int(time.Microsecond)
-	return Time{t: time.Date(y, m, d, 23, 59, 59, endOfDayNsec, loc)}
+	return MTime{t: time.Date(y, m, d, 23, 59, 59, endOfDayNsec, loc)}
 }
 
 // IsSameDay 判断两个 Time 是否处于同一日期（按各自时区的年月日判断）。
-func (t Time) IsSameDay(o Time) bool {
+func (t MTime) IsSameDay(o MTime) bool {
 	y1, m1, d1 := t.t.Date()
 	y2, m2, d2 := o.t.Date()
 	return y1 == y2 && m1 == m2 && d1 == d2
 }
 
 // Diff 返回 t - o 的 duration（time.Duration）。
-func (t Time) Diff(o Time) time.Duration { return t.t.Sub(o.t) }
+func (t MTime) Diff(o MTime) time.Duration { return t.t.Sub(o.t) }
 
 // Unix 返回秒级时间戳（等价于 time.Time.Unix）。
-func (t Time) Unix() int64 { return t.t.Unix() }
+func (t MTime) Unix() int64 { return t.t.Unix() }
 
 // UnixNano 返回纳秒级时间戳（等价于 time.Time.UnixNano）。
-func (t Time) UnixNano() int64 { return t.t.UnixNano() }
+func (t MTime) UnixNano() int64 { return t.t.UnixNano() }
 
 // UTC 返回转换为 UTC 时区的新 Time。
-func (t Time) UTC() Time { return Time{t: t.t.UTC()} }
+func (t MTime) UTC() MTime { return MTime{t: t.t.UTC()} }
 
 // Local 返回转换为本地时区的新 Time。
-func (t Time) Local() Time { return Time{t: t.t.Local()} }
+func (t MTime) Local() MTime { return MTime{t: t.t.Local()} }
 
 // tokenToLayout 将常见 token 映射为 Go 的时间 layout，支持部分 dayjs 风格 token：
 // 支持 token 示例：YYYY, MM, DD, HH, mm, ss, SSS, SSSSSS, ±HH:MM

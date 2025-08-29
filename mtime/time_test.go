@@ -165,7 +165,7 @@ func TestEdgeCases(t *testing.T) {
 }
 
 // ParseIntOrPanic is a tiny helper for tests to get Time from integer without repeating error handling.
-func ParseIntOrPanic(n int) Time {
+func ParseIntOrPanic(n int) MTime {
 	t, err := Parse(n)
 	if err != nil {
 		panic(err)
