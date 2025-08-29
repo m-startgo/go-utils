@@ -150,6 +150,18 @@ func MustParse(v any) MTime {
 	return t
 }
 
+// ParseToStd 解析任意支持的输入并直接返回标准库的 *time.Time 指针。
+// 该函数是对 Parse 的便捷包装：解析成功时返回底层 time.Time 的指针，解析失败时返回 nil（不返回 error）。
+// 注意：返回的 *time.Time 指针指向函数内部包装的 time 值的拷贝，调用方可安全使用。
+func ParseToStd(v any) *time.Time {
+	mt, err := Parse(v)
+	if err != nil {
+		return nil
+	}
+	// 直接返回底层 time.Time 的地址
+	return &mt.t
+}
+
 // isNumericString 判断字符串是否为“数字样式”的字符串：允许前导 + 或 -，以及单个小数点。
 // 返回 true 表示字符串可以被视为数字（整数或小数）。
 func isNumericString(s string) bool {

@@ -172,3 +172,24 @@ func ParseIntOrPanic(n int) MTime {
 	}
 	return t
 }
+
+// TestParseToStd 验证 ParseToStd 的行为：
+// - 有效输入返回非 nil 且时间值与 Parse 等价
+// - 无效输入返回 nil
+func TestParseToStd(t *testing.T) {
+	// 有效输入
+	std := ParseIntOrPanic(1609459200) // 2021-01-01T00:00:00Z
+	p := ParseToStd(1609459200)
+	if p == nil {
+		t.Fatalf("expected non-nil for valid input")
+	}
+	if !p.Equal(std.ToTime()) {
+		t.Fatalf("ParseToStd returned different time: %v vs %v", p, std.ToTime())
+	}
+
+	// 无效输入
+	invalid := ParseToStd("not a time")
+	if invalid != nil {
+		t.Fatalf("expected nil for invalid input")
+	}
+}

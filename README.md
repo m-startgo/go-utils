@@ -13,7 +13,7 @@ go get -u github.com/m-startgo/go-utils@latest
 ## 安装指定版本
 
 ```bash
-go get -u github.com/m-startgo/go-utils@v0.1.4
+go get -u github.com/m-startgo/go-utils@v0.2.1
 ```
 
 ## 主要包概览（简略）
