@@ -17,7 +17,7 @@ Package m_cron 提供一个简易的定时任务封装，基于 github.com/robfi
 
 示例：
 
-	c, err := m_cron.New(CronOption{
+	c, err := mcron.New(CronOption{
 			Func: func() { fmt.Println("hello") },
 			Spec: "0 0 12 * * *", // 带秒的 robfig/cron 表达式
 	})
