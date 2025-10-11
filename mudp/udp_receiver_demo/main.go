@@ -11,7 +11,7 @@ import (
 
 func main() {
 	// 在本机 9000 端口监听
-	addr := "127.0.0.1:9000"
+	addr := "127.0.0.1:9999"
 	r, err := mudp.NewReceiver(addr)
 	if err != nil {
 		err = fmt.Errorf("udp 监听失败: %w", err)

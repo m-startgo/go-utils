@@ -33,7 +33,7 @@ func main() {
 		dataByte, _ := mjson.ToByte(data)
 
 		fmt.Println("sender", string(dataByte))
-		_, err := s.Send(ctx, "127.0.0.1:9000", dataByte, time.Second)
+		_, err := s.Send(ctx, "127.0.0.1:9999", dataByte, time.Second)
 		if err != nil {
 			fmt.Println("sender error:", err)
 			return

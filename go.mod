@@ -9,3 +9,5 @@ require github.com/shopspring/decimal v1.4.0
 require github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 
 require github.com/google/uuid v1.6.0
+
+require github.com/gorilla/websocket v1.5.0
