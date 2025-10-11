@@ -19,8 +19,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	errCh := make(chan error, 1)
 	go func() {
-		_ = c.Listen(ctx, func(mt int, data []byte) {
+		errCh <- c.Listen(ctx, func(mt int, data []byte) {
 			fmt.Println("client recv:", string(data))
 		})
 	}()
@@ -33,5 +34,13 @@ func main() {
 			return
 		}
 		time.Sleep(300 * time.Millisecond)
+	}
+
+	// 发送完成后取消 Listen 的上下文并等待其返回，避免主 goroutine 永久阻塞导致 runtime deadlock
+	cancel()
+	if err := <-errCh; err != nil {
+		fmt.Println("listen exit with error:", err)
+	} else {
+		fmt.Println("listen exited")
 	}
 }

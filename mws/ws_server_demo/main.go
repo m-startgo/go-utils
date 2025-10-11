@@ -32,7 +32,7 @@ func echoHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/echo", echoHandler)
-	addr := ":9999"
+	addr := "127.0.0.1:9999"
 	fmt.Println("ws server listening", addr)
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		fmt.Println("server error:", err)

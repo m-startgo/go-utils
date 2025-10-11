@@ -16,6 +16,8 @@ import (
 type Conn struct {
 	conn *websocket.Conn
 	mu   sync.Mutex
+	// writeMu 用于保护并发写，遵循 gorilla/websocket 的并发写保护建议
+	writeMu sync.Mutex
 }
 
 // NewClient 建立到 websocket 服务端的连接。requestHeader 可为 nil。
@@ -58,6 +60,9 @@ func (c *Conn) Send(ctx context.Context, data []byte, timeout time.Duration) (n 
 	type res struct{ err error }
 	ch := make(chan res, 1)
 	go func() {
+		// 序列化写，避免并发写导致底层 panic 或数据错乱
+		c.writeMu.Lock()
+		defer c.writeMu.Unlock()
 		ch <- res{err: conn.WriteMessage(websocket.TextMessage, data)}
 	}()
 
@@ -92,7 +97,19 @@ func (c *Conn) Listen(ctx context.Context, handler Handler) error {
 		default:
 			// 设置短读超时以便可以周期性检查 ctx.Done()
 			_ = c.conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
-			mt, data, err := c.conn.ReadMessage()
+			var mt int
+			var data []byte
+			var err error
+			// 捕获底层 websocket 可能抛出的 panic（例如 repeated read on failed websocket connection）
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						// 将 panic 转为错误，供上层处理并停止监听
+						err = fmt.Errorf("panic in websocket ReadMessage: %v", r)
+					}
+				}()
+				mt, data, err = c.conn.ReadMessage()
+			}()
 			if err != nil {
 				if ne, ok := err.(net.Error); ok && ne.Timeout() {
 					select {
