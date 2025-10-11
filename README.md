@@ -29,7 +29,8 @@ go get -u github.com/m-startgo/go-utils@v0.2.3
 - `murl`：URL 处理辅助函数。
 - `mverify`：常用数据校验工具。
 - `mcycle`、`mcron`：循环与定时任务相关的辅助实现与测试样例。
-- `mencrypt`：加密/解密相关工具（示例/测试）。
+- `mencrypt`：加密/解密相关。
+- `mudp`：udp 通信和接收封装。
 
 ## 示例
 

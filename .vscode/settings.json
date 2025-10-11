@@ -1,4 +1,21 @@
 {
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    ".gitignore": ".gitattributes, .gitmodules, .stignore, ",
+    "go.mod": "go.sum",
+    "README.md": "AGENTS.md"
+  },
+  "[go]": {
+    "editor.defaultFormatter": "golang.go"
+  },
+  "[go.mod]": {
+    "editor.defaultFormatter": "golang.go"
+  },
+  "gopls": {
+    "formatting.gofumpt": true,
+    "ui.semanticTokens": true
+  },
+  "files.eol": "\n",
   "cSpell.words": [
     "mcron",
     "mcycle",
