@@ -27,6 +27,7 @@
     "mmath",
     "mpath",
     "mstr",
+    "mudp",
     "mverify",
     "Println",
     "startgo"
