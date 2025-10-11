@@ -27,7 +27,6 @@ func main() {
 		fmt.Println("监听已启动", addr)
 		err := r.Listen(ctx, func(data []byte, addr *net.UDPAddr) {
 			timeNow := time.Now().UnixNano()
-
 			fmt.Println("receiver", addr.String(), string(data), timeNow)
 		}, 4096)
 		if err != nil {

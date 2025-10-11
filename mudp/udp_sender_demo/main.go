@@ -28,8 +28,8 @@ func main() {
 		data := map[string]string{
 			"time": strconv.FormatInt(timeNow, 10),
 			"id":   strconv.Itoa(i),
+			"msg":  "hello udp",
 		}
-
 		dataByte, _ := mjson.ToByte(data)
 
 		fmt.Println("sender", string(dataByte))
