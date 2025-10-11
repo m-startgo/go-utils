@@ -4,74 +4,13 @@
 
 ## Receiver 使用示例
 
-```go
-package main
+```bash
 
-import (
-	"context"
-	"fmt"
-	"time"
+# Receiver 监听在本地 9000 端口，打印收到的消息内容和发送者地址
+go run mudp/udp_receiver_demo/main.go
 
-	"m-startgo/go-utils/mudp"
-)
-
-func main() {
-	// 在本机 9000 端口监听
-	r, err := mudp.NewReceiver(":9000")
-	if err != nil {
-		panic(err)
-	}
-	defer r.Close()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// 启动接收器
-	go func() {
-		err := r.Listen(ctx, func(data []byte, addr *net.UDPAddr) {
-			fmt.Printf("recv from %s: %s\n", addr.String(), string(data))
-		}, 4096)
-		if err != nil {
-			fmt.Println("receiver error:", err)
-		}
-	}()
-
-	// 运行若干时间后退出
-	time.Sleep(30 * time.Second)
-}
-```
-
-## Sender 使用示例
-
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-	"time"
-
-	"m-startgo/go-utils/mudp"
-)
-
-func main() {
-	// 可选绑定本地地址，例如 ":0" 让系统自动选择端口
-	s, err := mudp.NewSender(":0")
-	if err != nil {
-		panic(err)
-	}
-	defer s.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	n, err := s.Send(ctx, "127.0.0.1:9000", []byte("hello udp"), 2*time.Second)
-	if err != nil {
-		fmt.Println("send error:", err)
-		return
-	}
-	fmt.Println("bytes sent:", n)
-}
+# 在另一个终端运行 Sender 发送消息
+go run mudp/udp_sender_demo/main.go
 ```
 
 ## 注意事项
