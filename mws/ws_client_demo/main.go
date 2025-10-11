@@ -6,14 +6,21 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/m-startgo/go-utils/mstr"
 	"github.com/m-startgo/go-utils/mws"
 )
 
+const (
+	port = 9999
+	IP   = "127.0.0.1"
+)
+
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	url := "ws://127.0.0.1:9999/ws"
+	url := mstr.Join("ws://", IP, ":", port, "/ws")
+
 	conn, _, err := mws.DialContext(ctx, url, http.Header{})
 	if err != nil {
 		log.Fatalf("dial: %v", err)
