@@ -2,45 +2,33 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log"
+	"net/http"
 	"time"
 
 	"github.com/m-startgo/go-utils/mws"
 )
 
 func main() {
-	url := "ws://127.0.0.1:9999/echo"
-	c, err := mws.NewClient(url, nil)
-	if err != nil {
-		panic(err)
-	}
-	defer c.Close()
-
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- c.Listen(ctx, func(mt int, data []byte) {
-			fmt.Println("client recv:", string(data))
-		})
-	}()
+	url := "ws://127.0.0.1:9999/ws"
+	conn, _, err := mws.DialContext(ctx, url, http.Header{})
+	if err != nil {
+		log.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
 
-	for i := 0; i < 5; i++ {
-		msg := fmt.Sprintf("hello ws %d", i)
-		_, err := c.Send(context.Background(), []byte(msg), time.Second)
-		if err != nil {
-			fmt.Println("send err:", err)
-			return
-		}
-		time.Sleep(300 * time.Millisecond)
+	// send text
+	if err := conn.WriteMessage(1, []byte("hello from client")); err != nil {
+		log.Fatalf("write: %v", err)
 	}
 
-	// 发送完成后取消 Listen 的上下文并等待其返回，避免主 goroutine 永久阻塞导致 runtime deadlock
-	cancel()
-	if err := <-errCh; err != nil {
-		fmt.Println("listen exit with error:", err)
-	} else {
-		fmt.Println("listen exited")
+	// read echo
+	mt, msg, err := conn.ReadMessage()
+	if err != nil {
+		log.Fatalf("read: %v", err)
 	}
+	log.Printf("recv(%d): %s", mt, string(msg))
 }
