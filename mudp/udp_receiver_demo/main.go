@@ -2,46 +2,27 @@ package main
 
 import (
 	"fmt"
-	"log"
 
-	"github.com/m-startgo/go-utils/mstr"
-	"github.com/panjf2000/gnet/v2"
+	"github.com/m-startgo/go-utils/mudp"
 )
 
 var (
-	PORT   = 9999
-	IPAddr = "127.0.0.1"
+	PORT = 9999
+	IP   = "127.0.0.1"
 )
 
-type echoServer struct {
-	gnet.BuiltinEventEngine
-	Eng       gnet.Engine
-	Addr      string
-	MultiCore bool
-}
-
-// 引擎启动准备好接收数据时
-func (es *echoServer) OnBoot(eng gnet.Engine) gnet.Action {
-	es.Eng = eng
-	log.Printf("echo server with multi-core=%t is listening on %s\n", es.MultiCore, es.Addr)
-	return gnet.None
-}
-
-func (es *echoServer) OnTraffic(c gnet.Conn) gnet.Action {
-	buf, _ := c.Next(-1)
-	fmt.Println("收到", string(buf))
-	return gnet.None
-}
-
 func main() {
-	MultiCore := true
+	server := mudp.NewServer(mudp.Server{
+		Port:      PORT,
+		IP:        IP,
+		MultiCore: true,
+		OnMessage: func(eventName string, data []byte) {
+			fmt.Println(eventName, string(data))
+		},
+	})
 
-	UDPAddr := mstr.Join("udp://", IPAddr, ":", PORT)
-
-	echo := &echoServer{Addr: UDPAddr, MultiCore: MultiCore}
-
-	err := gnet.Run(echo, echo.Addr, gnet.WithMulticore(MultiCore))
+	err := server.Start()
 	if err != nil {
-		fmt.Println("服务启动失败:", err)
+		fmt.Println("服务启动失败", err)
 	}
 }
