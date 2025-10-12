@@ -4,8 +4,14 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/m-startgo/go-utils/mstr"
 	"github.com/m-startgo/go-utils/mws"
 	"github.com/valyala/fasthttp"
+)
+
+var (
+	PORT = 9999
+	IP   = "127.0.0.1"
 )
 
 func main() {
@@ -31,8 +37,10 @@ func main() {
 		}
 	}
 
-	fmt.Println("ws server listening :8080")
-	if err := fasthttp.ListenAndServe(":8080", h); err != nil {
+	wsUrl := mstr.Join(IP, ":", PORT)
+	fmt.Println("ws server listening:", wsUrl)
+	err := fasthttp.ListenAndServe(wsUrl, h)
+	if err != nil {
 		log.Fatal(err)
 	}
 }

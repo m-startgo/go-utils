@@ -5,13 +5,19 @@ import (
 	"log"
 	"time"
 
+	"github.com/m-startgo/go-utils/mstr"
 	"github.com/m-startgo/go-utils/mws"
+)
+
+var (
+	PORT = 9999
+	IP   = "127.0.0.1"
 )
 
 func main() {
 	// 注意：server 必须先启动
-	url := "ws://127.0.0.1:8080/ws"
-	conn, _, err := mws.Dial(url)
+	wsUrl := mstr.Join("ws://", IP, ":", PORT)
+	conn, _, err := mws.Dial(wsUrl)
 	if err != nil {
 		log.Fatal("dial error:", err)
 	}
