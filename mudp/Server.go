@@ -70,7 +70,8 @@ func (c *Server) Start() error {
 // 引擎启动准备好接收数据时
 func (es *echoServer) OnBoot(eng gnet.Engine) gnet.Action {
 	es.eng = eng
-	go es.onMessage("OnBoot", []byte("server is ready")) // 异步调用避免阻塞
+	msg := mstr.Join("listening on:", es.addr)
+	go es.onMessage("OnBoot", []byte(msg)) // 异步调用避免阻塞
 	return gnet.None
 }
 
