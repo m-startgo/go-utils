@@ -17,29 +17,30 @@ type echoServer struct {
 	gnet.BuiltinEventEngine
 	Eng       gnet.Engine
 	Addr      string
-	Multicore bool
+	MultiCore bool
 }
 
+// 引擎启动准备好接收数据时
 func (es *echoServer) OnBoot(eng gnet.Engine) gnet.Action {
 	es.Eng = eng
-	log.Printf("echo server with multi-core=%t is listening on %s\n", es.Multicore, es.Addr)
+	log.Printf("echo server with multi-core=%t is listening on %s\n", es.MultiCore, es.Addr)
 	return gnet.None
 }
 
 func (es *echoServer) OnTraffic(c gnet.Conn) gnet.Action {
 	buf, _ := c.Next(-1)
-	c.Write(buf)
+	fmt.Println("收到", string(buf))
 	return gnet.None
 }
 
 func main() {
-	multicore := true
+	MultiCore := true
 
-	UDPAddr := mstr.Join("tcp://", IPAddr, ":", PORT)
+	UDPAddr := mstr.Join("udp://", IPAddr, ":", PORT)
 
-	echo := &echoServer{Addr: UDPAddr, Multicore: multicore}
+	echo := &echoServer{Addr: UDPAddr, MultiCore: MultiCore}
 
-	err := gnet.Run(echo, echo.Addr, gnet.WithMulticore(multicore))
+	err := gnet.Run(echo, echo.Addr, gnet.WithMulticore(MultiCore))
 	if err != nil {
 		fmt.Println("服务启动失败:", err)
 	}
