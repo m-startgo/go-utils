@@ -11,3 +11,10 @@ require github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 require github.com/google/uuid v1.6.0
 
 require github.com/gorilla/websocket v1.5.3
+
+require github.com/json-iterator/go v1.1.12
+
+require (
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
+)
