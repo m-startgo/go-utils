@@ -45,8 +45,7 @@ func main() {
 		var v any
 		err := wsjson.Read(context.Background(), c, &v)
 		if err != nil {
-			// 不要直接 Fatal，优雅处理连接关闭或 EOF 情况
-			fmt.Println("err:mws.ws_client_demo|Read|", err)
+			fmt.Println("err:mws.ws_server_demo|Read|", err)
 			break
 		}
 		fmt.Println("recv:", v)
