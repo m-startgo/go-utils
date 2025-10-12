@@ -75,7 +75,10 @@ func (es *echoServer) OnBoot(eng gnet.Engine) gnet.Action {
 }
 
 func (es *echoServer) OnTraffic(c gnet.Conn) gnet.Action {
-	buf, _ := c.Next(-1)
+	buf, err := c.Next(-1)
+	if err != nil {
+		return gnet.Close
+	}
 	go es.onMessage("OnTraffic", buf) // 异步调用避免阻塞
 	return gnet.None
 }
