@@ -9,14 +9,17 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
+// 使用 jsoniter 的最快配置以提升序列化性能，注意兼容性和行为差异需在测试中验证。
+var jsonFast = jsoniter.ConfigFastest
+
 // 将结构体转为 JSON 字节切片。
 func Marshal(v any) ([]byte, error) {
-	return jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(v)
+	return jsonFast.Marshal(v)
 }
 
 // 将 JSON 字节切片解析到结构体中。
 func Unmarshal(data []byte, v any) error {
-	return jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, v)
+	return jsonFast.Unmarshal(data, v)
 }
 
 // 将任意数据转换为 JSON 字节切片。
@@ -46,13 +49,12 @@ func ToStr(data any) string {
 // 将任意 JSON-able 数据转换为缩进格式的 JSON 字符串。
 // 错误时返回 "{}"。
 func IndentJson(data any) string {
-	jsonByte, err := ToByte(data)
+	s, err := jsonFast.MarshalToString(data)
 	if err != nil {
 		return "{}"
 	}
 	var out bytes.Buffer
-	err2 := stdjson.Indent(&out, jsonByte, "", " ")
-	if err2 != nil {
+	if err := stdjson.Indent(&out, []byte(s), "", " "); err != nil {
 		return "{}"
 	}
 	return out.String()
