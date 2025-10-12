@@ -10,8 +10,8 @@ import (
 type Sender struct {
 	IP   string
 	Port int
-	addr string
 	Conn net.Conn
+	addr string
 }
 
 func NewSender(opt Sender) (send *Sender, err error) {
@@ -28,12 +28,7 @@ func NewSender(opt Sender) (send *Sender, err error) {
 		return
 	}
 
-	if opt.addr == "" {
-		// 使用 send.IP 而不是 opt.IP 保持与前面默认值一致
-		send.addr = mstr.Join(send.IP, ":", send.Port)
-	} else {
-		send.addr = opt.addr
-	}
+	send.addr = mstr.Join(send.IP, ":", send.Port)
 
 	conn, err := net.Dial("udp", send.addr)
 	if err != nil {

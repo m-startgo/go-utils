@@ -18,10 +18,8 @@ var (
 
 func main() {
 	addr := mstr.Join("ws://", IP, ":", PORT, "/ws")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
 
-	c, resp, err := websocket.Dial(ctx, addr, nil)
+	c, resp, err := websocket.Dial(context.Background(), addr, nil)
 	if err != nil {
 		if resp != nil {
 			log.Printf("err:mws.ws_client_demo|Dial|status=%s", resp.Status)
@@ -30,21 +28,27 @@ func main() {
 	}
 	defer c.CloseNow()
 
-	// 发送一条简单消息
-	msg := map[string]any{"msg": "hello from client"}
-	err = wsjson.Write(ctx, c, msg)
-	if err != nil {
-		log.Fatalf("err:mws.ws_client_demo|Write|%v", err)
-	}
+	go func() {
+		for {
+			// 发送一条简单消息
+			msg := map[string]any{"msg": "hello from client"}
+			err = wsjson.Write(context.Background(), c, msg)
+			if err != nil {
+				log.Fatalf("err:mws.ws_client_demo|Write|%v", err)
+			}
+			time.Sleep(3 * time.Second)
+		}
+	}()
 
-	// 读取回复
-	var v any
-	// 使用单独的 context 以便给读取操作一个较短超时
-	rctx, rcancel := context.WithTimeout(context.Background(), time.Second)
-	defer rcancel()
-	err = wsjson.Read(rctx, c, &v)
-	if err != nil {
-		log.Fatalf("err:mws.ws_client_demo|Read|%v", err)
+	for {
+		var v any
+		err = wsjson.Read(context.Background(), c, &v)
+		if err != nil {
+			// 不要直接 Fatal，优雅处理连接关闭或 EOF 情况
+			log.Printf("err:mws.ws_client_demo|Read|%v", err)
+			break
+		}
+		fmt.Println("recv:", v)
+
 	}
-	fmt.Println("recv:", v)
 }

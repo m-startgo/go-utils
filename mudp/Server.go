@@ -39,11 +39,7 @@ func NewServer(opt Server) (server *Server, err error) {
 		return
 	}
 
-	if opt.addr == "" {
-		server.addr = mstr.Join("udp://", server.IP, ":", server.Port)
-	} else {
-		server.addr = opt.addr
-	}
+	server.addr = mstr.Join("udp://", server.IP, ":", server.Port)
 
 	server.OnMessage = opt.OnMessage
 	if server.OnMessage == nil {
