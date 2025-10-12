@@ -9,18 +9,19 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
-// Marshal 使用 jsoniter.ConfigCompatibleWithStandardLibrary 对 v 进行序列化。
-// 保持与标准库兼容的语义，同时利用 jsoniter 的实现。
+// 将结构体转为 JSON 字节切片。
 func Marshal(v any) ([]byte, error) {
 	return jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(v)
 }
 
-// Unmarshal 使用 jsoniter.ConfigCompatibleWithStandardLibrary 对 data 进行反序列化到 v。
+// 将 JSON 字节切片解析到结构体中。
 func Unmarshal(data []byte, v any) error {
 	return jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, v)
 }
 
-// 将任意 JSON-able 数据转换为 JSON 字节切片。
+// 将任意数据转换为 JSON 字节切片。
+// JSON-able 包括结构体、map、切片等。
+// 错误时返回非 nil 错误。
 func ToByte(data any) ([]byte, error) {
 	if data == nil {
 		return nil, fmt.Errorf("err:mjson.ToByte|nil|data is nil")

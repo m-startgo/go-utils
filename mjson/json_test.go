@@ -5,6 +5,30 @@ import (
 	"testing"
 )
 
+// go test -v  ./..
+
+// go test -v -run TestMarshalAndUnmarshal
+func TestMarshalAndUnmarshal(t *testing.T) {
+	obj := map[string]int{
+		"a": 1,
+		"b": 2,
+	}
+	b, err := Marshal(obj)
+	if err != nil {
+		t.Fatalf("Marshal error: %v", err)
+	}
+
+	var obj2 map[string]int
+	err = Unmarshal(b, &obj2)
+	if err != nil {
+		t.Fatalf("Unmarshal error: %v", err)
+	}
+
+	if obj2["a"] != 1 || obj2["b"] != 2 {
+		t.Fatalf("Unmarshal result incorrect: %#v", obj2)
+	}
+}
+
 // 覆盖 ToByte 的正常与错误路径
 func TestToByte_NilAndUnmarshalable(t *testing.T) {
 	// nil 应返回错误
@@ -82,7 +106,7 @@ func TestPrintAny_ReturnsIndentString(t *testing.T) {
 		N int `json:"n"`
 	}
 	a := A{N: 3}
-	res := PrintAny(a)
+	res := IndentJson(a)
 	if !strings.Contains(res, "\"n\": 3") {
 		t.Fatalf("PrintAny 返回的字符串不包含预期内容: %s", res)
 	}
