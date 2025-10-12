@@ -10,10 +10,10 @@
 
 ```bash
 # 1. 启动接收端
-go run ./mudp/udp_receiver_demo
+go run ./mudp/udp_serve_demo
 
 # 2. 运行发送端（在另一个终端）
-go run ./mudp/udp_sender_demo
+go run ./mudp/udp_send_demo
 
 ```
 
