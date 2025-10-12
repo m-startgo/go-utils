@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/m-startgo/go-utils/mstr"
+	"github.com/m-startgo/go-utils/mtime"
 	"github.com/m-startgo/go-utils/mws"
 )
 
@@ -16,26 +17,35 @@ const (
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
 	url := mstr.Join("ws://", IP, ":", port, "/ws")
 
-	conn, _, err := mws.DialContext(ctx, url, http.Header{})
+	// 拨号到 ws 服务器
+	conn, _, err := mws.DialContext(context.Background(), url, http.Header{})
 	if err != nil {
-		log.Fatalf("dial: %v", err)
+		log.Fatalf("连接失败: %v", err)
 	}
 	defer conn.Close()
 
-	// send text
-	if err := conn.WriteMessage(1, []byte("hello from client")); err != nil {
-		log.Fatalf("write: %v", err)
-	}
+	log.Printf("已连接到服务器：%s", url)
 
-	// read echo
-	mt, msg, err := conn.ReadMessage()
-	if err != nil {
-		log.Fatalf("read: %v", err)
+	var i int
+
+	for {
+		i++
+		msg := []byte(mstr.Join(mtime.NowDefaultString(), "-消息 ", i))
+		if err := conn.WriteMessage(1, msg); err != nil {
+			log.Printf("发送错误: %v", err)
+			return
+		}
+		log.Printf("已发送: %s", string(msg))
+
+		mt, rmsg, err := conn.ReadMessage()
+		if err != nil {
+			log.Printf("读取回应错误: %v", err)
+			return
+		}
+		log.Printf("收到回应(%d): %s", mt, string(rmsg))
+
+		time.Sleep(2 * time.Second)
 	}
-	log.Printf("recv(%d): %s", mt, string(msg))
 }
