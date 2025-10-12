@@ -16,7 +16,8 @@ var (
 
 func main() {
 	// 注意：server 必须先启动
-	wsUrl := mstr.Join("ws://", IP, ":", PORT)
+	// server listens upgrade on path /ws, make sure client requests that path
+	wsUrl := mstr.Join("ws://", IP, ":", PORT, "/ws")
 	conn, _, err := mws.Dial(wsUrl)
 	if err != nil {
 		log.Fatal("dial error:", err)
