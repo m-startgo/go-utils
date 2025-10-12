@@ -8,16 +8,13 @@
 
 示例：
 
-1. 启动接收端
+```bash
+# 1. 启动接收端
+go run ./mudp/udp_receiver_demo
 
-   go run ./mudp/udp_receiver_demo
+# 2. 运行发送端（在另一个终端）
+go run ./mudp/udp_sender_demo
 
-2. 运行发送端（在另一个终端）
-
-   go run ./mudp/udp_sender_demo
+```
 
 接收端将打印收到的消息。
-
-注意：gnet 在 Windows 上推荐仅用于开发测试，生产环境以 Linux 为主。
-
-# mudp 使用说明
