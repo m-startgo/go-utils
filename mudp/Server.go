@@ -12,9 +12,9 @@ type OnMessageFunc func(eventName string, data []byte)
 type Server struct {
 	IP        string
 	Port      int
-	Addr      string
 	MultiCore bool
 	OnMessage OnMessageFunc
+	addr      string
 }
 
 type echoServer struct {
@@ -39,10 +39,10 @@ func NewServer(opt Server) (server *Server, err error) {
 		return
 	}
 
-	if opt.Addr == "" {
-		server.Addr = mstr.Join("udp://", server.IP, ":", server.Port)
+	if opt.addr == "" {
+		server.addr = mstr.Join("udp://", server.IP, ":", server.Port)
 	} else {
-		server.Addr = opt.Addr
+		server.addr = opt.addr
 	}
 
 	server.OnMessage = opt.OnMessage
@@ -59,7 +59,7 @@ func NewServer(opt Server) (server *Server, err error) {
 
 func (c *Server) Start() error {
 	echo := &echoServer{
-		addr:      c.Addr,
+		addr:      c.addr,
 		multiCore: c.MultiCore,
 		onMessage: c.OnMessage,
 	}

@@ -10,7 +10,7 @@ import (
 type Sender struct {
 	IP   string
 	Port int
-	Addr string
+	addr string
 	Conn net.Conn
 }
 
@@ -28,14 +28,14 @@ func NewSender(opt Sender) (send *Sender, err error) {
 		return
 	}
 
-	if opt.Addr == "" {
+	if opt.addr == "" {
 		// 使用 send.IP 而不是 opt.IP 保持与前面默认值一致
-		send.Addr = mstr.Join(send.IP, ":", send.Port)
+		send.addr = mstr.Join(send.IP, ":", send.Port)
 	} else {
-		send.Addr = opt.Addr
+		send.addr = opt.addr
 	}
 
-	conn, err := net.Dial("udp", send.Addr)
+	conn, err := net.Dial("udp", send.addr)
 	if err != nil {
 		err = fmt.Errorf("mudp.NewSender|net.Dial 失败|%v", err)
 		return
