@@ -1,6 +1,8 @@
 package mudp
 
 import (
+	"fmt"
+
 	"github.com/m-startgo/go-utils/mstr"
 	"github.com/panjf2000/gnet/v2"
 )
@@ -8,8 +10,9 @@ import (
 type OnMessageFunc func(eventName string, data []byte)
 
 type Server struct {
-	Port      int
 	IP        string
+	Port      int
+	Addr      string
 	MultiCore bool
 	OnMessage OnMessageFunc
 }
@@ -22,39 +25,45 @@ type echoServer struct {
 	onMessage OnMessageFunc
 }
 
-func NewServer(opt Server) *Server {
-	var c Server
-	c.IP = opt.IP
-	if c.IP == "" {
-		c.IP = "127.0.0.1"
+func NewServer(opt Server) (server *Server, err error) {
+	err = nil
+	server = &Server{}
+
+	server.IP = opt.IP
+	if server.IP == "" {
+		server.IP = "127.0.0.1"
 	}
-	c.Port = opt.Port
-	if c.Port == 0 {
-		c.Port = 9000
+	server.Port = opt.Port
+	if server.Port == 0 {
+		err = fmt.Errorf("mudp.NewServer|Port 不能为空")
+		return
 	}
 
-	c.OnMessage = opt.OnMessage
-	if c.OnMessage == nil {
-		c.OnMessage = func(eventName string, data []byte) {
+	if opt.Addr == "" {
+		server.Addr = mstr.Join("udp://", server.IP, ":", server.Port)
+	} else {
+		server.Addr = opt.Addr
+	}
+
+	server.OnMessage = opt.OnMessage
+	if server.OnMessage == nil {
+		server.OnMessage = func(eventName string, data []byte) {
 			// 默认空实现，避免 nil 指针异常
 		}
 	}
 
-	c.MultiCore = opt.MultiCore
-	return &c
+	server.MultiCore = opt.MultiCore
+
+	return
 }
 
 func (c *Server) Start() error {
-	UDPAddr := mstr.Join("udp://", c.IP, ":", c.Port)
-
 	echo := &echoServer{
-		addr:      UDPAddr,
+		addr:      c.Addr,
 		multiCore: c.MultiCore,
 		onMessage: c.OnMessage,
 	}
-
 	err := gnet.Run(echo, echo.addr, gnet.WithMulticore(c.MultiCore))
-
 	return err
 }
 
