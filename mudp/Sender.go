@@ -36,10 +36,28 @@ func NewSender(opt Sender) (send *Sender, err error) {
 
 	conn, err := net.Dial("udp", send.Addr)
 	if err != nil {
+		err = fmt.Errorf("mudp.NewSender|net.Dial 失败|%v", err)
 		return
 	}
 
 	send.Conn = conn
 
 	return
+}
+
+func (s *Sender) Write(data []byte) (n int, err error) {
+	if s.Conn == nil {
+		err = fmt.Errorf("mudp.Write|Conn 不能为空")
+		return
+	}
+	n, err = s.Conn.Write(data)
+	if err != nil {
+		err = fmt.Errorf("mudp.Write|Write 失败|%v", err)
+		return
+	}
+	return
+}
+
+func (s *Sender) Close() (err error) {
+	return s.Conn.Close()
 }

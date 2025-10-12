@@ -2,29 +2,28 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"strconv"
 	"time"
 
 	"github.com/m-startgo/go-utils/mjson"
-	"github.com/m-startgo/go-utils/mstr"
+	"github.com/m-startgo/go-utils/mudp"
 )
 
 var (
-	PORT   = 9999
-	IPAddr = "127.0.0.1"
+	PORT = 9999
+	IP   = "127.0.0.1"
 )
 
 // 简化版 demo：每秒向目标 UDP 地址发送一条消息。
 func main() {
-	url := mstr.Join(IPAddr, ":", PORT)
-
-	conn, err := net.Dial("udp", url)
+	sender, err := mudp.NewSender(mudp.Sender{
+		IP:   IP,
+		Port: PORT,
+	})
 	if err != nil {
-		fmt.Println("创建UDP Sender失败", err)
+		fmt.Println("创建 Sender 失败:", err)
 		return
 	}
-	defer conn.Close()
 
 	i := 0
 	for {
@@ -38,7 +37,7 @@ func main() {
 		dataByte, _ := mjson.ToByte(data)
 		fmt.Println("发送", string(dataByte))
 
-		_, err := conn.Write(dataByte)
+		_, err := sender.Write(dataByte)
 		if err != nil {
 			fmt.Println("发送失败:", err)
 		}
