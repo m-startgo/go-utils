@@ -79,6 +79,9 @@ func (es *echoServer) OnTraffic(c gnet.Conn) gnet.Action {
 	if err != nil {
 		return gnet.Close
 	}
-	go es.onMessage("OnTraffic", buf) // 异步调用避免阻塞
+	// 复制 buf 到新切片以避免 gnet 中的缓冲区被复用后产生数据竞争
+	data := make([]byte, len(buf))
+	copy(data, buf)
+	go es.onMessage("OnTraffic", data) // 异步调用避免阻塞
 	return gnet.None
 }

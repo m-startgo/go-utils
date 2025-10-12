@@ -29,7 +29,8 @@ func NewSender(opt Sender) (send *Sender, err error) {
 	}
 
 	if opt.Addr == "" {
-		send.Addr = mstr.Join(opt.IP, ":", opt.Port)
+		// 使用 send.IP 而不是 opt.IP 保持与前面默认值一致
+		send.Addr = mstr.Join(send.IP, ":", send.Port)
 	} else {
 		send.Addr = opt.Addr
 	}
@@ -59,5 +60,8 @@ func (s *Sender) Write(data []byte) (n int, err error) {
 }
 
 func (s *Sender) Close() (err error) {
+	if s.Conn == nil {
+		return nil
+	}
 	return s.Conn.Close()
 }
