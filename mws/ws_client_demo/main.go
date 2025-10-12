@@ -22,8 +22,10 @@ func main() {
 	if err != nil {
 		if resp != nil {
 			fmt.Println("err:mws.ws_client_demo|Dial|status", resp.Status)
+			return
 		}
 		fmt.Println("err:mws.ws_client_demo|Dial|", err)
+		return
 	}
 	defer c.CloseNow()
 
@@ -31,7 +33,7 @@ func main() {
 		for {
 			// 发送一条简单消息
 			msg := map[string]any{"msg": "hello from client"}
-			err = wsjson.Write(context.Background(), c, msg)
+			err := wsjson.Write(context.Background(), c, msg)
 			if err != nil {
 				fmt.Println("err:mws.ws_client_demo|Write|", err)
 			}
@@ -41,7 +43,7 @@ func main() {
 
 	for {
 		var v any
-		err = wsjson.Read(context.Background(), c, &v)
+		err := wsjson.Read(context.Background(), c, &v)
 		if err != nil {
 			// 不要直接 Fatal，优雅处理连接关闭或 EOF 情况
 			fmt.Println("err:mws.ws_client_demo|Read|", err)

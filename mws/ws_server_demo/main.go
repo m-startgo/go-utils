@@ -50,5 +50,6 @@ func main() {
 	err := http.ListenAndServe(addr, nil)
 	if err != nil {
 		fmt.Println("err:mws.ws_server_demo|ListenAndServe", err)
+		return
 	}
 }
