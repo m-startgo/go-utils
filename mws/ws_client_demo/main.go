@@ -4,10 +4,11 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/m-startgo/go-utils/mjson"
 	"github.com/m-startgo/go-utils/mstr"
-	"github.com/m-startgo/go-utils/mtime"
 	"github.com/m-startgo/go-utils/mws"
 )
 
@@ -32,20 +33,25 @@ func main() {
 
 	for {
 		i++
-		msg := []byte(mstr.Join(mtime.NowDefaultString(), "-消息 ", i))
-		if err := conn.WriteMessage(1, msg); err != nil {
+		timeNow := time.Now().UnixNano()
+		data := map[string]string{
+			"time": strconv.FormatInt(timeNow, 10),
+			"id":   strconv.Itoa(i),
+			"msg":  "hello ws-server",
+		}
+		dataByte, _ := mjson.ToByte(data)
+		if err := conn.WriteMessage(2, dataByte); err != nil {
 			log.Printf("发送错误: %v", err)
 			return
 		}
-		log.Printf("已发送: %s", string(msg))
-
 		mt, rmsg, err := conn.ReadMessage()
 		if err != nil {
 			log.Printf("读取回应错误: %v", err)
 			return
 		}
-		log.Printf("收到回应(%d): %s", mt, string(rmsg))
+		timeNow2 := time.Now().UnixNano()
+		log.Println("收到回应:", mt, string(rmsg), timeNow2)
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 }

@@ -1,14 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
-	"github.com/gorilla/websocket"
+	"github.com/m-startgo/go-utils/mjson"
 	"github.com/m-startgo/go-utils/mstr"
-	"github.com/m-startgo/go-utils/mtime"
 	"github.com/m-startgo/go-utils/mws"
 )
 
@@ -35,30 +34,31 @@ func main() {
 					log.Printf("读取错误: %v", err)
 					break
 				}
+				timeNow := time.Now().UnixNano()
 
-				if mt == websocket.TextMessage {
-					log.Printf("接收到了文本：%s", string(msg))
-				} else if mt == websocket.BinaryMessage {
-					log.Printf("接收到了二进制数据（%d 字节）", len(msg))
-				} else {
-					log.Printf("接收到了消息类型 %d（%d 字节）", mt, len(msg))
-				}
+				log.Println("收到消息:", mt, string(msg), timeNow)
 				// 立即回应客户端
 				if mt > 0 {
-					sendMsg := []byte(mstr.Join(mtime.NowDefaultString(), "收到消息: ", msg))
-					if err := c.WriteMessage(websocket.TextMessage, sendMsg); err != nil {
+					sendMsg := []byte("pong")
+					if err := c.WriteMessage(1, sendMsg); err != nil {
 						log.Printf("写入错误: %v", err)
 						break
 					}
 				}
-
-				fmt.Printf("----\n")
 			}
 		}()
 		// 主动给客户端发消息
+		var i int
 		for {
-			sendMsg := []byte(mstr.Join(mtime.NowDefaultString(), "服务端发送"))
-			c.WriteMessage(1, []byte(sendMsg))
+			i++
+			timeNow := time.Now().UnixNano()
+			data := map[string]string{
+				"time": strconv.FormatInt(timeNow, 10),
+				"id":   strconv.Itoa(i),
+				"msg":  "hello ws-client",
+			}
+			dataByte, _ := mjson.ToByte(data)
+			c.WriteMessage(2, dataByte)
 			time.Sleep(4 * time.Second)
 		}
 	})
