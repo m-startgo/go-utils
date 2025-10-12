@@ -1,19 +1,41 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"time"
+	"log"
 
-	"github.com/m-startgo/go-utils/mudp"
+	"github.com/panjf2000/gnet/v2"
 )
 
+type echoServer struct {
+	gnet.BuiltinEventEngine
+
+	eng       gnet.Engine
+	addr      string
+	multicore bool
+}
+
+func (es *echoServer) OnBoot(eng gnet.Engine) gnet.Action {
+	es.eng = eng
+	log.Printf("echo server with multi-core=%t is listening on %s\n", es.multicore, es.addr)
+	return gnet.None
+}
+
+func (es *echoServer) OnTraffic(c gnet.Conn) gnet.Action {
+	buf, _ := c.Next(-1)
+	c.Write(buf)
+	return gnet.None
+}
+
 func main() {
-	msg := []byte("hello from sender")
-	if err := mudp.SendTo("127.0.0.1:9001", msg); err != nil {
-		fmt.Println("send error:", err)
-		return
-	}
-	fmt.Println("sent")
-	// 等待一小会儿以便接收端打印
-	time.Sleep(100 * time.Millisecond)
+	var port int
+	var multicore bool
+
+	// Example command: go run echo.go --port 9000 --multicore=true
+	flag.IntVar(&port, "port", 9000, "--port 9000")
+	flag.BoolVar(&multicore, "multicore", false, "--multicore true")
+	flag.Parse()
+	echo := &echoServer{addr: fmt.Sprintf("tcp://:%d", port), multicore: multicore}
+	log.Fatal(gnet.Run(echo, echo.addr, gnet.WithMulticore(multicore)))
 }
