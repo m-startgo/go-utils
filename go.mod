@@ -11,6 +11,7 @@ require github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 require github.com/google/uuid v1.6.0
 
 require (
+	github.com/coder/websocket v1.8.14
 	github.com/json-iterator/go v1.1.12
 	github.com/panjf2000/gnet/v2 v2.9.4
 )
