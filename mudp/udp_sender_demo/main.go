@@ -1,41 +1,37 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"log"
+	"net"
+	"strconv"
+	"time"
 
-	"github.com/panjf2000/gnet/v2"
+	"github.com/m-startgo/go-utils/mjson"
 )
 
-type echoServer struct {
-	gnet.BuiltinEventEngine
-
-	eng       gnet.Engine
-	addr      string
-	multicore bool
-}
-
-func (es *echoServer) OnBoot(eng gnet.Engine) gnet.Action {
-	es.eng = eng
-	log.Printf("echo server with multi-core=%t is listening on %s\n", es.multicore, es.addr)
-	return gnet.None
-}
-
-func (es *echoServer) OnTraffic(c gnet.Conn) gnet.Action {
-	buf, _ := c.Next(-1)
-	c.Write(buf)
-	return gnet.None
-}
-
+// 简化版 demo：每秒向目标 UDP 地址发送一条消息。
 func main() {
-	var port int
-	var multicore bool
+	conn, err := net.Dial("udp", "127.0.0.1:9999")
+	if err != nil {
+		fmt.Println("创建UDP Sender失败", err)
+		return
+	}
+	defer conn.Close()
 
-	// Example command: go run echo.go --port 9000 --multicore=true
-	flag.IntVar(&port, "port", 9000, "--port 9000")
-	flag.BoolVar(&multicore, "multicore", false, "--multicore true")
-	flag.Parse()
-	echo := &echoServer{addr: fmt.Sprintf("tcp://:%d", port), multicore: multicore}
-	log.Fatal(gnet.Run(echo, echo.addr, gnet.WithMulticore(multicore)))
+	i := 0
+	for {
+		i++
+		timeNow := time.Now().UnixNano()
+		data := map[string]string{
+			"time": strconv.FormatInt(timeNow, 10),
+			"id":   strconv.Itoa(i),
+			"msg":  "hello udp",
+		}
+		dataByte, _ := mjson.ToByte(data)
+		_, err := conn.Write(dataByte)
+		if err != nil {
+			fmt.Println("发送失败:", err)
+		}
+		time.Sleep(time.Second)
+	}
 }
