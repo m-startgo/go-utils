@@ -46,7 +46,7 @@ func main() {
 		}
 	})
 
-	fmt.Println("ws server listening on %s", addr)
+	fmt.Println("ws server listening on", addr)
 	err := http.ListenAndServe(addr, nil)
 	if err != nil {
 		fmt.Println("err:mws.ws_server_demo|ListenAndServe", err)
