@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -17,7 +18,7 @@ var (
 
 func main() {
 	addr := mstr.Join("ws://", IP, ":", PORT, "/ws")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
 	c, resp, err := websocket.Dial(ctx, addr, nil)
@@ -39,10 +40,11 @@ func main() {
 	// 读取回复
 	var v any
 	// 使用单独的 context 以便给读取操作一个较短超时
-	rctx, rcancel := context.WithTimeout(context.Background(), 5*time.Second)
+	rctx, rcancel := context.WithTimeout(context.Background(), time.Second)
 	defer rcancel()
 	err = wsjson.Read(rctx, c, &v)
 	if err != nil {
 		log.Fatalf("err:mws.ws_client_demo|Read|%v", err)
 	}
+	fmt.Println("recv:", v)
 }
