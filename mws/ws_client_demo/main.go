@@ -1,57 +1,31 @@
 package main
 
 import (
-	"context"
+	"fmt"
 	"log"
-	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/m-startgo/go-utils/mjson"
-	"github.com/m-startgo/go-utils/mstr"
 	"github.com/m-startgo/go-utils/mws"
 )
 
-const (
-	port = 9999
-	IP   = "127.0.0.1"
-)
-
 func main() {
-	url := mstr.Join("ws://", IP, ":", port, "/ws")
-
-	// 拨号到 ws 服务器
-	conn, _, err := mws.DialContext(context.Background(), url, http.Header{})
+	// 注意：server 必须先启动
+	url := "ws://127.0.0.1:8080/ws"
+	conn, _, err := mws.Dial(url)
 	if err != nil {
-		log.Fatalf("连接失败: %v", err)
+		log.Fatal("dial error:", err)
 	}
-	defer conn.Close()
+	conn.SetOnMessage(func(mt int, data []byte) {
+		fmt.Println("server reply:", string(data))
+	})
+	conn.SetOnClose(func(err error) {
+		fmt.Println("closed:", err)
+	})
 
-	log.Printf("已连接到服务器：%s", url)
+	_ = conn.SendText("hello from client")
 
-	var i int
-
-	for {
-		i++
-		timeNow := time.Now().UnixNano()
-		data := map[string]string{
-			"time": strconv.FormatInt(timeNow, 10),
-			"id":   strconv.Itoa(i),
-			"msg":  "hello ws-server",
-		}
-		dataByte, _ := mjson.ToByte(data)
-		if err := conn.WriteMessage(2, dataByte); err != nil {
-			log.Printf("发送错误: %v", err)
-			return
-		}
-		mt, rmsg, err := conn.ReadMessage()
-		if err != nil {
-			log.Printf("读取回应错误: %v", err)
-			return
-		}
-		timeNow2 := time.Now().UnixNano()
-		log.Println("收到回应:", mt, string(rmsg), timeNow2)
-
-		time.Sleep(5 * time.Second)
-	}
+	time.Sleep(1 * time.Second)
+	_ = conn.Close()
+	// wait a bit to let close callbacks print
+	time.Sleep(200 * time.Millisecond)
 }
