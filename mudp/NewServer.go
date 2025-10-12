@@ -16,10 +16,10 @@ type Server struct {
 
 type echoServer struct {
 	gnet.BuiltinEventEngine
-	Eng       gnet.Engine
-	Addr      string
-	MultiCore bool
-	OnMessage OnMessageFunc
+	eng       gnet.Engine
+	addr      string
+	multiCore bool
+	onMessage OnMessageFunc
 }
 
 func NewServer(opt Server) *Server {
@@ -48,25 +48,25 @@ func (c *Server) Start() error {
 	UDPAddr := mstr.Join("udp://", c.IP, ":", c.Port)
 
 	echo := &echoServer{
-		Addr:      UDPAddr,
-		MultiCore: c.MultiCore,
-		OnMessage: c.OnMessage,
+		addr:      UDPAddr,
+		multiCore: c.MultiCore,
+		onMessage: c.OnMessage,
 	}
 
-	err := gnet.Run(echo, echo.Addr, gnet.WithMulticore(c.MultiCore))
+	err := gnet.Run(echo, echo.addr, gnet.WithMulticore(c.MultiCore))
 
 	return err
 }
 
 // 引擎启动准备好接收数据时
 func (es *echoServer) OnBoot(eng gnet.Engine) gnet.Action {
-	es.Eng = eng
-	go es.OnMessage("OnBoot", []byte("server is ready")) // 异步调用避免阻塞
+	es.eng = eng
+	go es.onMessage("OnBoot", []byte("server is ready")) // 异步调用避免阻塞
 	return gnet.None
 }
 
 func (es *echoServer) OnTraffic(c gnet.Conn) gnet.Action {
 	buf, _ := c.Next(-1)
-	go es.OnMessage("OnTraffic", buf) // 异步调用避免阻塞
+	go es.onMessage("OnTraffic", buf) // 异步调用避免阻塞
 	return gnet.None
 }
