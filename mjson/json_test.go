@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// go test -v  ./..
+// go test -v  ./...
 
 // go test -v -run TestMarshalAndUnmarshal
 func TestMarshalAndUnmarshal(t *testing.T) {
