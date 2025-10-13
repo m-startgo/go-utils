@@ -96,7 +96,6 @@ func (server *Server) Start() error {
 				return
 			}
 		}
-		_ = c.Close(websocket.StatusNormalClosure, "bye")
 	})
 
 	return http.ListenAndServe(server.addr, nil)
