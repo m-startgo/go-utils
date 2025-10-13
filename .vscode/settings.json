@@ -3,7 +3,8 @@
   "explorer.fileNesting.patterns": {
     ".gitignore": ".gitattributes, .gitmodules, .stignore, ",
     "go.mod": "go.sum",
-    "README.md": "AGENTS.md"
+    "README.md": "AGENTS.md, LICENSE",
+    "package.json": "*.json, go.mod, config.*, *config.ts, eslint*, .prettier*, *.d.ts, *lock, *json.md5"
   },
   "[go]": {
     "editor.defaultFormatter": "golang.go"
@@ -16,6 +17,11 @@
     "ui.semanticTokens": true
   },
   "files.eol": "\n",
+  "editor.formatOnSave": true,
+  "editor.tabSize": 2,
+  "files.exclude": {
+    "node_modules": true
+  },
   "cSpell.words": [
     "mcron",
     "mcycle",

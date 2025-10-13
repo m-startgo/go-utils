@@ -8,6 +8,29 @@
 *.so
 *.dylib
 
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+lerna-debug.log*
+
+
+# Caches
+.cache
+
+# Node / JS
+node_modules
+dist
+dist-ssr
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+bun.lockb
+
 # Test binary, built with `go test -c`
 *.test
 
@@ -16,7 +39,7 @@
 coverage.*
 *.coverprofile
 profile.cov
-logs/
+logs/  
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
@@ -24,10 +47,7 @@ logs/
 # Go workspace file
 go.work
 go.work.sum
+go.sum
 
 # env file
 .env
-
-# Editor/IDE
-# .idea/
-# .vscode/
