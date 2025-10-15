@@ -12,7 +12,7 @@ var (
 )
 
 func main() {
-	udpServer, err := mudp.NewServer(mudp.Server{
+	udpServer, err := mudp.NewListener(mudp.Server{
 		Port:      PORT,
 		IP:        IP,
 		MultiCore: true,

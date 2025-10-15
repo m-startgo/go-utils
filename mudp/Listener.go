@@ -25,41 +25,41 @@ type echoServer struct {
 	onMessage OnMessageFunc
 }
 
-func NewServer(opt Server) (server *Server, err error) {
+func NewListener(opt Server) (serv *Server, err error) {
 	err = nil
-	server = &Server{}
+	serv = &Server{}
 
-	server.IP = opt.IP
-	if server.IP == "" {
-		server.IP = "127.0.0.1"
+	serv.IP = opt.IP
+	if serv.IP == "" {
+		serv.IP = "127.0.0.1"
 	}
-	server.Port = opt.Port
-	if server.Port == 0 {
+	serv.Port = opt.Port
+	if serv.Port == 0 {
 		err = fmt.Errorf("mudp.NewServer|Port 不能为空")
 		return
 	}
 
-	server.addr = mstr.Join("udp://", server.IP, ":", server.Port)
+	serv.addr = mstr.Join("udp://", serv.IP, ":", serv.Port)
 
-	server.OnMessage = opt.OnMessage
-	if server.OnMessage == nil {
-		server.OnMessage = func(eventName string, data []byte) {
+	serv.OnMessage = opt.OnMessage
+	if serv.OnMessage == nil {
+		serv.OnMessage = func(eventName string, data []byte) {
 			// 默认空实现，避免 nil 指针异常
 		}
 	}
 
-	server.MultiCore = opt.MultiCore
+	serv.MultiCore = opt.MultiCore
 
 	return
 }
 
-func (c *Server) Start() error {
+func (serv *Server) Start() error {
 	echo := &echoServer{
-		addr:      c.addr,
-		multiCore: c.MultiCore,
-		onMessage: c.OnMessage,
+		addr:      serv.addr,
+		multiCore: serv.MultiCore,
+		onMessage: serv.OnMessage,
 	}
-	err := gnet.Run(echo, echo.addr, gnet.WithMulticore(c.MultiCore))
+	err := gnet.Run(echo, echo.addr, gnet.WithMulticore(serv.MultiCore))
 	return err
 }
 
