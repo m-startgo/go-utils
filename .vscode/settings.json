@@ -34,11 +34,12 @@
     "mmath",
     "mpath",
     "mstr",
+    "mtcp",
     "mudp",
     "mverify",
+    "panjf2000",
     "Println",
     "serv",
-    "startgo",
-    "panjf2000"
+    "startgo"
   ]
 }
