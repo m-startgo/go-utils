@@ -1,3 +1,6 @@
+go run ./mudp/udp_serve_demo
+go run ./mudp/udp_send_demo
+
 # mudp 使用说明
 
 基于 `github.com/panjf2000/gnet/v2` 的简单 UDP 封装。

@@ -7,9 +7,17 @@ import (
 	"github.com/panjf2000/gnet/v2"
 )
 
+// OnMessageFunc 是接收到数据时的回调函数签名。
+// eventName: 事件名(例如 "OnBoot"/"OnTraffic")
+// data: 原始字节数据
 type OnMessageFunc func(eventName string, data []byte)
 
-type Server struct {
+// Listener 表示一个 UDP 监听器配置。
+//
+// 示例:
+//
+//	l, err := mudp.NewListener(mudp.Listener{IP: "127.0.0.1", Port: 9999, OnMessage: fn})
+type Listener struct {
 	IP        string
 	Port      int
 	MultiCore bool
@@ -17,6 +25,7 @@ type Server struct {
 	addr      string
 }
 
+// echoServer 是内部用于 gnet 的事件引擎实现。
 type echoServer struct {
 	gnet.BuiltinEventEngine
 	eng       gnet.Engine
@@ -25,60 +34,64 @@ type echoServer struct {
 	onMessage OnMessageFunc
 }
 
-func NewListener(opt Server) (serv *Server, err error) {
+// NewListener 根据传入配置创建并返回一个 Listener 实例。
+// 返回的 Listener 仅为配置容器；调用者需要调用 Start() 启动服务。
+func NewListener(opt Listener) (l *Listener, err error) {
 	err = nil
-	serv = &Server{}
+	l = &Listener{}
 
-	serv.IP = opt.IP
-	if serv.IP == "" {
-		serv.IP = "127.0.0.1"
+	l.IP = opt.IP
+	if l.IP == "" {
+		l.IP = "127.0.0.1"
 	}
-	serv.Port = opt.Port
-	if serv.Port == 0 {
-		err = fmt.Errorf("mudp.NewServer|Port 不能为空")
+	l.Port = opt.Port
+	if l.Port == 0 {
+		err = fmt.Errorf("err:mudp.NewListener|Port|不能为空")
 		return
 	}
 
-	serv.addr = mstr.Join("udp://", serv.IP, ":", serv.Port)
+	// gnet 使用的地址格式示例: udp://127.0.0.1:9999
+	l.addr = mstr.Join("udp://", l.IP, ":", l.Port)
 
-	serv.OnMessage = opt.OnMessage
-	if serv.OnMessage == nil {
-		serv.OnMessage = func(eventName string, data []byte) {
-			// 默认空实现，避免 nil 指针异常
-		}
+	l.OnMessage = opt.OnMessage
+	if l.OnMessage == nil {
+		// 提供默认空实现以避免 nil 调用
+		l.OnMessage = func(eventName string, data []byte) {}
 	}
 
-	serv.MultiCore = opt.MultiCore
+	l.MultiCore = opt.MultiCore
 
 	return
 }
 
-func (serv *Server) Start() error {
+// Start 阻塞启动监听，返回非 nil 错误表示启动失败或运行期间出错。
+func (l *Listener) Start() error {
 	echo := &echoServer{
-		addr:      serv.addr,
-		multiCore: serv.MultiCore,
-		onMessage: serv.OnMessage,
+		addr:      l.addr,
+		multiCore: l.MultiCore,
+		onMessage: l.OnMessage,
 	}
-	err := gnet.Run(echo, echo.addr, gnet.WithMulticore(serv.MultiCore))
+	err := gnet.Run(echo, echo.addr, gnet.WithMulticore(l.MultiCore))
 	return err
 }
 
-// 引擎启动准备好接收数据时
+// 引擎启动回调：向外部报告 OnBoot 事件
 func (es *echoServer) OnBoot(eng gnet.Engine) gnet.Action {
 	es.eng = eng
 	msg := mstr.Join("listening on:", es.addr)
-	go es.onMessage("OnBoot", []byte(msg)) // 异步调用避免阻塞
+	go es.onMessage("OnBoot", []byte(msg)) // 异步回调以避免阻塞
 	return gnet.None
 }
 
+// 数据到达回调：复制数据并异步上报
 func (es *echoServer) OnTraffic(c gnet.Conn) gnet.Action {
 	buf, err := c.Next(-1)
 	if err != nil {
 		return gnet.Close
 	}
-	// 复制 buf 到新切片以避免 gnet 中的缓冲区被复用后产生数据竞争
+	// 复制 buf 到新的切片，避免 gnet 重用底层缓冲区导致竞争
 	data := make([]byte, len(buf))
 	copy(data, buf)
-	go es.onMessage("OnTraffic", data) // 异步调用避免阻塞
+	go es.onMessage("OnTraffic", data) // 异步回调
 	return gnet.None
 }
