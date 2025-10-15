@@ -23,6 +23,7 @@
     "node_modules": true
   },
   "cSpell.words": [
+    "gnet",
     "mcron",
     "mcycle",
     "mfile",
@@ -37,6 +38,7 @@
     "mverify",
     "Println",
     "serv",
-    "startgo"
+    "startgo",
+    "panjf2000"
   ]
 }
