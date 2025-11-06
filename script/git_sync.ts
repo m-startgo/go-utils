@@ -1,58 +1,64 @@
+#!/usr/bin/env ts-node
+
+/* 
+自动提交脚本，只提交道当前分支的远端仓库
+*/
+
 import os from 'os';
-import { $ } from 'bun';
+import shell from 'shelljs';
+
+if (!shell.which('git')) {
+  shell.echo('Sorry, this script requires git');
+  shell.exit(1);
+}
+
+const desc = process.argv[2];
+if (!desc) {
+  console.error('err:请提供提交描述信息');
+  process.exit(0);
+}
 
 // 获取当前执行命令的目录
 const currentDir = process.cwd();
-console.info('当前执行命令的目录:', currentDir);
-$.cwd(currentDir);
+shell.cd(currentDir);
+console.info('当前执行命令的目录:', shell.pwd().toString());
 
-const SetFileMod777 = async () => {
-  const sysType = os.platform();
-  if (sysType == 'darwin' || sysType == 'linux') {
-    await $`chmod -R 777 ./`;
-    console.info('文件权限已重置');
+// 使用 os 设置所有文件权限为 777
+function SetFileMod777() {
+  if (os.platform() === 'win32') {
+    console.info('Windows 平台，跳过权限设置');
+    return;
   }
-};
+  shell.exec('chmod -R 777 ./');
+  console.info('已将所有文件权限设置为 777');
+}
 
 const SetGitLocalConfig = async () => {
-  try {
-    // 开启当前项目 git 大小写敏感
-    await $`git config core.ignorecase false`;
-    // 忽略当前项目文件权限变更
-    await $`git config core.filemode false`;
-    // 禁用当前项目 pull.rebase
-    await $`git config pull.rebase false`;
-    console.info('本地 git config 已覆盖');
-  } catch (error) {
-    console.error(`git err code: ${error.exitCode}`);
-    console.info(error.stdout.toString());
-    console.info(error.stderr.toString());
-    process.exit(1);
-  }
+  shell.exec('git config core.ignorecase false');
+  shell.exec('git config core.filemode false');
+  shell.exec('git config pull.rebase false');
 };
 
 await SetFileMod777();
 await SetGitLocalConfig();
 
-const desc = process.argv[2];
-if (desc) {
-  console.info(`git commit: ${desc} \n`);
+shell.exec('git pull');
+shell.exec('git add .');
+const commitCmd = `git commit -m "${desc}"`;
+const commitResult = shell.exec(commitCmd);
+
+if (commitResult.code === 0) {
+  shell.exec('git push');
+} else if (
+  commitResult.code === 1 &&
+  commitResult.stdout.includes('nothing to commit, working tree clean')
+) {
+  console.info('No changes to commit. Exiting.');
+  shell.exit(0);
 } else {
-  console.warn(`请认真填写 git commit ! \n`);
-  process.exit(0);
+  console.error(`Git commit failed with code: ${commitResult.code}`);
+  console.error(commitResult.stdout);
+  shell.exit(1);
 }
 
-try {
-  await $`git pull`;
-  await $`git add .`;
-  await $`git commit -m "${desc}"`;
-  await $`git push`;
-} catch (error) {
-  if (error.stdout.toString().includes('nothing to commit, working tree clean')) {
-    process.exit(0);
-  } else {
-    console.error(`git err code: ${error.exitCode}`);
-    throw new Error(error.stdout.toString());
-  }
-}
 process.exit(0);
