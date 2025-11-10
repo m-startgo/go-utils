@@ -12,7 +12,7 @@ require github.com/google/uuid v1.6.0
 
 require (
 	github.com/json-iterator/go v1.1.12
-	github.com/panjf2000/gnet/v2 v2.9.4
+	github.com/panjf2000/gnet/v2 v2.9.5
 )
 
 require (
@@ -22,7 +22,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
